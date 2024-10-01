@@ -82,9 +82,12 @@ exports.getBooksForLibrary = getBooksForLibrary;
 /**
  * Get Books on deck
  */
-const getBooksOnDeck = async () => {
+const getBooksOnDeck = async (library_id) => {
     const { content: data } = await (0, _1.request)({
         url: await (0, utils_1.genURL)("/api/v1/books/ondeck"),
+        params: {
+            ...(library_id && { library_id }),
+        },
     });
     const host = await (0, auth_1.getHost)();
     const highlights = (data ?? []).map((book) => (0, utils_1.bookToHighlight)(book, host));
@@ -660,7 +663,7 @@ async function resolveLibrarySection(libraryId, sectionKey) {
             break;
         }
         case "on_deck": {
-            const highlights = await (0, library_1.getBooksForLibrary)(libraryId, (0, utils_1.buildSort)(utils_1.SORTS.releaseDate, false));
+            const highlights = await (0, library_1.getBooksOnDeck)(libraryId);
             items = highlights;
             break;
         }
