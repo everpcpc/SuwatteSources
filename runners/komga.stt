@@ -1022,7 +1022,7 @@ exports.convertSort = convertSort;
 /**
  * builds the sort query param using the key and its order
  */
-const buildSort = (key, asc = false) => `${key},${asc ? "asc" : "desc"}`;
+const buildSort = (key, asc) => `${key},${asc ? "asc" : "desc"}`;
 exports.buildSort = buildSort;
 /**
  * Generates a url using the user specified host
