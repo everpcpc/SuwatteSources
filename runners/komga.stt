@@ -65,13 +65,12 @@ exports.getUserLibraries = getUserLibraries;
 /**
  * Gets All Books within a library
  */
-const getBooksForLibrary = async (library_id, sort, status, filters) => {
+const getBooksForLibrary = async (library_id, sort, filters) => {
     const { content: data } = await (0, _1.request)({
         url: await (0, utils_1.genURL)("/api/v1/books"),
         params: {
-            ...(filters ?? {}),
             sort,
-            read_status: status,
+            ...filters,
             ...(library_id && { library_id }),
         },
     });
@@ -109,15 +108,15 @@ const getSeriesForLibraryWithState = async (library_id, state) => {
     return data ?? [];
 };
 exports.getSeriesForLibraryWithState = getSeriesForLibraryWithState;
-const getSeriesForLibrary = async (library_id, sort, page, search, filters) => {
+const getSeriesForLibrary = async (library_id, sort, filters, page, search) => {
     const config = {
         url: await (0, utils_1.genURL)(`/api/v1/series`),
         params: {
-            ...(filters ?? {}),
             library_id,
             sort,
+            ...filters,
             page: page - 1,
-            size: 30,
+            size: utils_1.RESULT_COUNT,
             search,
         },
     };
@@ -128,14 +127,14 @@ exports.getSeriesForLibrary = getSeriesForLibrary;
 /**
  * Get books within a series
  */
-const getBooksForSeries = async (series, sort, page, filters) => {
+const getBooksForSeries = async (series, sort, filters, page) => {
     const { content: data, last } = await (0, _1.request)({
         url: await (0, utils_1.genURL)(`/api/v1/series/${series}/books`),
         params: {
-            ...(filters ?? {}),
             page: page - 1,
             size: utils_1.RESULT_COUNT,
             sort,
+            ...filters,
         },
     });
     const host = await (0, auth_1.getHost)();
@@ -184,14 +183,14 @@ const getBooks = async (series, size, sort = (0, utils_1.buildSort)(utils_1.DEFA
     return data ?? [];
 };
 exports.getBooks = getBooks;
-const getBooks2 = async (page, sort, search, filters) => {
+const getBooks2 = async (page, sort, filters, search) => {
     const { content: data } = await (0, _1.request)({
         url: await (0, utils_1.genURL)(`/api/v1/books`),
         params: {
-            ...(filters ?? {}),
             page: page - 1,
             size: utils_1.RESULT_COUNT,
             sort,
+            ...filters,
             search,
         },
     });
@@ -427,7 +426,7 @@ async function fetchDirectory(request) {
     const seriesId = request.context?.seriesId;
     const libraryId = request.context?.libraryId;
     if (seriesId) {
-        const result = await (0, api_1.getBooksForSeries)(seriesId, sort, request.page, filters);
+        const result = await (0, api_1.getBooksForSeries)(seriesId, sort, filters, request.page);
         return {
             results: result.items,
             isLastPage: result.isLastPage,
@@ -438,7 +437,7 @@ async function fetchDirectory(request) {
         const asTitle = await store_1.KomgaStore.openSeriesAsTitle();
         if (!host)
             throw new Error("Host not defined");
-        const results = (await (0, api_1.getSeriesForLibrary)(libraryId, (0, utils_1.buildSort)(request.sort?.id, request.sort?.ascending), request.page, request.query, filters)).map((v) => (0, utils_1.seriesToTile)(v, host, !(asTitle ?? false)));
+        const results = (await (0, api_1.getSeriesForLibrary)(libraryId, (0, utils_1.buildSort)(request.sort?.id, request.sort?.ascending), filters, request.page, request.query)).map((v) => (0, utils_1.seriesToTile)(v, host, !(asTitle ?? false)));
         return {
             results,
             isLastPage: results.length < utils_1.RESULT_COUNT,
@@ -450,14 +449,14 @@ async function fetchDirectory(request) {
         throw new Error("Host not defined");
     if (isSeriesDirectory) {
         const asTitle = await store_1.KomgaStore.openSeriesAsTitle();
-        const results = (await (0, api_1.getSeriesForLibrary)(libraryId, (0, utils_1.buildSort)(request.sort?.id, request.sort?.ascending), request.page, request.query, filters)).map((v) => (0, utils_1.seriesToTile)(v, host, !(asTitle ?? false)));
+        const results = (await (0, api_1.getSeriesForLibrary)(libraryId, (0, utils_1.buildSort)(request.sort?.id, request.sort?.ascending), filters, request.page, request.query)).map((v) => (0, utils_1.seriesToTile)(v, host, !(asTitle ?? false)));
         return {
             results,
             isLastPage: results.length < utils_1.RESULT_COUNT,
         };
     }
     else {
-        const results = (await (0, api_1.getBooks2)(request.page, (0, utils_1.buildSort)(request.sort?.id, request.sort?.ascending), request.query, filters)).map((v) => (0, utils_1.bookToHighlight)(v, host));
+        const results = (await (0, api_1.getBooks2)(request.page, (0, utils_1.buildSort)(request.sort?.id, request.sort?.ascending), filters, request.query)).map((v) => (0, utils_1.bookToHighlight)(v, host));
         return {
             results,
             isLastPage: results.length < utils_1.RESULT_COUNT,
@@ -637,6 +636,7 @@ async function resolveLibrarySection(libraryId, sectionKey) {
                             page: 1,
                             context: {
                                 isSeriesDirectory: false,
+                                libraryId,
                             },
                         },
                     },
@@ -650,6 +650,7 @@ async function resolveLibrarySection(libraryId, sectionKey) {
                             page: 1,
                             context: {
                                 isSeriesDirectory: true,
+                                libraryId,
                             },
                         },
                     },
@@ -659,7 +660,7 @@ async function resolveLibrarySection(libraryId, sectionKey) {
             break;
         }
         case "keep_reading": {
-            const highlights = await (0, library_1.getBooksForLibrary)(libraryId, (0, utils_1.buildSort)(utils_1.Sort.ReadDate, false), utils_1.ReadStatus.InProgress);
+            const highlights = await (0, library_1.getBooksForLibrary)(libraryId, (0, utils_1.buildSort)(utils_1.Sort.ReadDate, false), { read_status: [utils_1.ReadStatus.InProgress] });
             items = highlights;
             break;
         }
@@ -669,7 +670,7 @@ async function resolveLibrarySection(libraryId, sectionKey) {
             break;
         }
         case "recently_added_books": {
-            const highlights = await (0, library_1.getBooksForLibrary)(libraryId, (0, utils_1.buildSort)(utils_1.Sort.DateAdded, false));
+            const highlights = await (0, library_1.getBooksForLibrary)(libraryId, (0, utils_1.buildSort)(utils_1.Sort.DateAdded, false), {});
             items = highlights;
             break;
         }
@@ -841,7 +842,7 @@ const pageLinkResolver_1 = require("./impl/pageLinkResolver");
 const info = {
     id: "org.komga",
     name: "Komga",
-    version: 1.21,
+    version: 1.22,
     minSupportedAppVersion: "6.0.0",
     thumbnail: "komga.png",
     website: "https://komga.org",
