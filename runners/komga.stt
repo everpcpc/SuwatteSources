@@ -971,7 +971,7 @@ exports.FilterOptions = [
     },
     {
         id: "status",
-        title: "Status",
+        title: "Series Status",
         type: daisuke_1.FilterType.MULTISELECT,
         options: [
             {
