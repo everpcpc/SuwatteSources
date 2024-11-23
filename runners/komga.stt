@@ -425,6 +425,11 @@ async function fetchDirectory(request) {
         : (0, utils_1.buildSort)();
     const seriesId = request.context?.seriesId;
     const libraryId = request.context?.libraryId;
+    const host = await (0, api_1.getHost)();
+    if (!host) {
+        throw new Error("Host not defined");
+    }
+    const asTitle = await store_1.KomgaStore.openSeriesAsTitle();
     if (seriesId) {
         const result = await (0, api_1.getBooksForSeries)(seriesId, sort, filters, request.page);
         return {
@@ -433,10 +438,6 @@ async function fetchDirectory(request) {
         };
     }
     else if (libraryId) {
-        const host = await (0, api_1.getHost)();
-        const asTitle = await store_1.KomgaStore.openSeriesAsTitle();
-        if (!host)
-            throw new Error("Host not defined");
         const results = (await (0, api_1.getSeriesForLibrary)(libraryId, (0, utils_1.buildSort)(request.sort?.id, request.sort?.ascending), filters, request.page, request.query)).map((v) => (0, utils_1.seriesToTile)(v, host, !(asTitle ?? false)));
         return {
             results,
@@ -444,11 +445,7 @@ async function fetchDirectory(request) {
         };
     }
     const isSeriesDirectory = request.context?.isSeriesDirectory ?? false;
-    const host = await (0, api_1.getHost)();
-    if (!host)
-        throw new Error("Host not defined");
     if (isSeriesDirectory) {
-        const asTitle = await store_1.KomgaStore.openSeriesAsTitle();
         const results = (await (0, api_1.getSeriesForLibrary)(libraryId, (0, utils_1.buildSort)(request.sort?.id, request.sort?.ascending), filters, request.page, request.query)).map((v) => (0, utils_1.seriesToTile)(v, host, !(asTitle ?? false)));
         return {
             results,
@@ -840,7 +837,7 @@ const pageLinkResolver_1 = require("./impl/pageLinkResolver");
 const info = {
     id: "org.komga",
     name: "Komga",
-    version: 1.23,
+    version: 1.17,
     minSupportedAppVersion: "6.0.0",
     thumbnail: "komga.png",
     website: "https://komga.org",
