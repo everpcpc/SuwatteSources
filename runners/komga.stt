@@ -636,7 +636,6 @@ async function resolveLibrarySection(libraryId, sectionKey) {
                             page: 1,
                             context: {
                                 isSeriesDirectory: false,
-                                libraryId,
                             },
                         },
                     },
@@ -650,7 +649,6 @@ async function resolveLibrarySection(libraryId, sectionKey) {
                             page: 1,
                             context: {
                                 isSeriesDirectory: true,
-                                libraryId,
                             },
                         },
                     },
@@ -842,7 +840,7 @@ const pageLinkResolver_1 = require("./impl/pageLinkResolver");
 const info = {
     id: "org.komga",
     name: "Komga",
-    version: 1.22,
+    version: 1.23,
     minSupportedAppVersion: "6.0.0",
     thumbnail: "komga.png",
     website: "https://komga.org",
