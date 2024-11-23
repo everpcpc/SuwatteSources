@@ -413,7 +413,7 @@ function buildDirectoryConfig() {
             canChangeOrder: true,
             default: {
                 id: utils_1.DEFAULT_SORT,
-                ascending: true,
+                ascending: false,
             },
         },
     };
@@ -934,7 +934,7 @@ exports.SortOptions = [
     },
 ];
 exports.RESULT_COUNT = 30;
-exports.DEFAULT_SORT = Sort.Name;
+exports.DEFAULT_SORT = Sort.DateUpdated;
 var SeriesStatus;
 (function (SeriesStatus) {
     SeriesStatus["Ended"] = "ENDED";
