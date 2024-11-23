@@ -420,7 +420,9 @@ function buildDirectoryConfig() {
     };
 }
 async function fetchDirectory(request) {
-    const filters = request.filters ?? {};
+    const filters = request.filters
+        ? (0, utils_1.buildFilters)(request.filters)
+        : {};
     const sort = request.sort
         ? (0, utils_1.buildSort)(request.sort.id, request.sort.ascending)
         : (0, utils_1.buildSort)();
@@ -841,7 +843,7 @@ const pageLinkResolver_1 = require("./impl/pageLinkResolver");
 const info = {
     id: "org.komga",
     name: "Komga",
-    version: 1.18,
+    version: 1.19,
     minSupportedAppVersion: "6.0.0",
     thumbnail: "komga.png",
     website: "https://komga.org",
@@ -954,7 +956,7 @@ exports.FilterOptions = [
     {
         id: "read_status",
         title: "Read Status",
-        type: daisuke_1.FilterType.SELECT,
+        type: daisuke_1.FilterType.MULTISELECT,
         options: [
             {
                 id: ReadStatus.Unread,
@@ -983,7 +985,7 @@ exports.FilterOptions = [
     {
         id: "status",
         title: "Status",
-        type: daisuke_1.FilterType.SELECT,
+        type: daisuke_1.FilterType.MULTISELECT,
         options: [
             {
                 id: SeriesStatus.Ended,
@@ -1008,10 +1010,30 @@ exports.FilterOptions = [
 },{"@suwatte/daisuke":22}],20:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.seriesToContent = exports.bookToChapter = exports.bookToHighlight = exports.seriesToTile = exports.genURL = exports.buildSort = void 0;
+exports.seriesToContent = exports.bookToChapter = exports.bookToHighlight = exports.seriesToTile = exports.genURL = exports.buildSort = exports.buildFilters = void 0;
 const daisuke_1 = require("@suwatte/daisuke");
 const api_1 = require("../api");
 const constants_1 = require("./constants");
+/**
+ * builds the filter query param using filter items
+ */
+const buildFilters = (filters = {}) => {
+    for (const k in filters) {
+        const val = filters[k];
+        switch (typeof val) {
+            case "string":
+            case "object":
+                continue;
+            case "boolean":
+                filters[k] = val ? "true" : "false";
+                break;
+            default:
+                continue;
+        }
+    }
+    return filters;
+};
+exports.buildFilters = buildFilters;
 /**
  * builds the sort query param using the key and its order
  */
