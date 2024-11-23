@@ -113,9 +113,9 @@ const getSeriesForLibrary = async (library_id, sort, page, search, filters) => {
     const config = {
         url: await (0, utils_1.genURL)(`/api/v1/series`),
         params: {
+            ...(filters ?? {}),
             library_id,
             sort,
-            ...(filters ?? {}),
             page: page - 1,
             size: 30,
             search,
@@ -132,10 +132,10 @@ const getBooksForSeries = async (series, sort, page, filters) => {
     const { content: data, last } = await (0, _1.request)({
         url: await (0, utils_1.genURL)(`/api/v1/series/${series}/books`),
         params: {
+            ...(filters ?? {}),
             page: page - 1,
             size: utils_1.RESULT_COUNT,
             sort,
-            ...(filters ?? {}),
         },
     });
     const host = await (0, auth_1.getHost)();
@@ -188,10 +188,10 @@ const getBooks2 = async (page, sort, search, filters) => {
     const { content: data } = await (0, _1.request)({
         url: await (0, utils_1.genURL)(`/api/v1/books`),
         params: {
+            ...(filters ?? {}),
             page: page - 1,
             size: utils_1.RESULT_COUNT,
             sort,
-            ...(filters ?? {}),
             search,
         },
     });
@@ -420,9 +420,7 @@ function buildDirectoryConfig() {
     };
 }
 async function fetchDirectory(request) {
-    const filters = request.filters
-        ? (0, utils_1.buildFilters)(request.filters)
-        : {};
+    const filters = request.filters ?? {};
     const sort = request.sort
         ? (0, utils_1.buildSort)(request.sort.id, request.sort.ascending)
         : (0, utils_1.buildSort)();
@@ -843,7 +841,7 @@ const pageLinkResolver_1 = require("./impl/pageLinkResolver");
 const info = {
     id: "org.komga",
     name: "Komga",
-    version: 1.19,
+    version: 1.21,
     minSupportedAppVersion: "6.0.0",
     thumbnail: "komga.png",
     website: "https://komga.org",
@@ -973,16 +971,6 @@ exports.FilterOptions = [
         ],
     },
     {
-        id: "complete",
-        title: "Complete",
-        type: daisuke_1.FilterType.TOGGLE,
-    },
-    {
-        id: "oneshot",
-        title: "One Shot",
-        type: daisuke_1.FilterType.TOGGLE,
-    },
-    {
         id: "status",
         title: "Status",
         type: daisuke_1.FilterType.MULTISELECT,
@@ -1010,30 +998,10 @@ exports.FilterOptions = [
 },{"@suwatte/daisuke":22}],20:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.seriesToContent = exports.bookToChapter = exports.bookToHighlight = exports.seriesToTile = exports.genURL = exports.buildSort = exports.buildFilters = void 0;
+exports.seriesToContent = exports.bookToChapter = exports.bookToHighlight = exports.seriesToTile = exports.genURL = exports.buildSort = void 0;
 const daisuke_1 = require("@suwatte/daisuke");
 const api_1 = require("../api");
 const constants_1 = require("./constants");
-/**
- * builds the filter query param using filter items
- */
-const buildFilters = (filters = {}) => {
-    for (const k in filters) {
-        const val = filters[k];
-        switch (typeof val) {
-            case "string":
-            case "object":
-                continue;
-            case "boolean":
-                filters[k] = val ? "true" : "false";
-                break;
-            default:
-                continue;
-        }
-    }
-    return filters;
-};
-exports.buildFilters = buildFilters;
 /**
  * builds the sort query param using the key and its order
  */
