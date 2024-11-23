@@ -11,7 +11,7 @@ const getUser = async () => {
 };
 exports.getUser = getUser;
 const getHost = async () => {
-    let host = await store_1.KomgaStore.host();
+    const host = await store_1.KomgaStore.host();
     if (!host)
         throw new Error("You have not defined a server url!");
     if (host.endsWith("/"))
@@ -149,7 +149,7 @@ const getBooksForSeriesAsChapters = async (series) => {
         params: {
             page: 0,
             size: 9999,
-            sort: (0, utils_1.buildSort)(utils_1.SORTS.number, false),
+            sort: (0, utils_1.buildSort)(utils_1.Sort.Number, false),
         },
     });
     const host = await (0, auth_1.getHost)();
@@ -281,17 +281,12 @@ exports.KomgaAuthentication = {
             },
         });
         // Try Fetching User to verify
-        try {
-            await client.request({
-                url: await (0, utils_1.genURL)("/api/v2/users/me"),
-            });
-            // Set Props
-            await ObjectStore.set("authenticated", true);
-            await SecureStore.set("credentials", value);
-        }
-        catch (err) {
-            throw err;
-        }
+        await client.request({
+            url: await (0, utils_1.genURL)("/api/v2/users/me"),
+        });
+        // Set Props
+        await ObjectStore.set("authenticated", true);
+        await SecureStore.set("credentials", value);
     },
 };
 
@@ -399,7 +394,7 @@ exports.KomgaDirectoryHandler = {
     getDirectory: function (request) {
         return fetchDirectory(request);
     },
-    getDirectoryConfig: async function (key) {
+    getDirectoryConfig: async function (_) {
         return buildDirectoryConfig(true);
     },
 };
@@ -658,7 +653,7 @@ async function resolveLibrarySection(libraryId, sectionKey) {
             break;
         }
         case "keep_reading": {
-            const highlights = await (0, library_1.getBooksForLibrary)(libraryId, (0, utils_1.buildSort)(utils_1.SORTS.readProgress, false), "IN_PROGRESS");
+            const highlights = await (0, library_1.getBooksForLibrary)(libraryId, (0, utils_1.buildSort)(utils_1.Sort.ReadDate, false), "IN_PROGRESS");
             items = highlights;
             break;
         }
@@ -668,7 +663,7 @@ async function resolveLibrarySection(libraryId, sectionKey) {
             break;
         }
         case "recently_added_books": {
-            const highlights = await (0, library_1.getBooksForLibrary)(libraryId, (0, utils_1.buildSort)(utils_1.SORTS.creationDate, false));
+            const highlights = await (0, library_1.getBooksForLibrary)(libraryId, (0, utils_1.buildSort)(utils_1.Sort.DateAdded, false));
             items = highlights;
             break;
         }
@@ -725,7 +720,7 @@ exports.KomgaProgressProvider = {
             params: {
                 page: 0,
                 size: 999,
-                sort: (0, utils_1.buildSort)(utils_1.SORTS.readProgress, false),
+                sort: (0, utils_1.buildSort)(utils_1.Sort.ReadDate, false),
             },
         });
         if (!data || !data.length)
@@ -840,7 +835,7 @@ const pageLinkResolver_1 = require("./impl/pageLinkResolver");
 const info = {
     id: "org.komga",
     name: "Komga",
-    version: 1.16,
+    version: 1.17,
     minSupportedAppVersion: "6.0.0",
     thumbnail: "komga.png",
     website: "https://komga.org",
@@ -890,38 +885,46 @@ exports.KomgaStore = {
 },{}],19:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.DEFAULT_SORT = exports.RESULT_COUNT = exports.SortOptions = exports.SORTS = void 0;
-exports.SORTS = {
-    readProgress: "readProgress.readDate",
-    releaseDate: "metadata.releaseDate",
-    creationDate: "createdDate",
-    number: "metadata.numberSort",
-    name: "name",
-};
+exports.DEFAULT_SORT = exports.RESULT_COUNT = exports.SortOptions = exports.Sort = void 0;
+var Sort;
+(function (Sort) {
+    Sort["Name"] = "metadata.titleSort";
+    Sort["DateAdded"] = "createdDate";
+    Sort["DateUpdated"] = "lastModifiedDate";
+    Sort["ReleaseDate"] = "booksMetadata.releaseDate";
+    Sort["FolderName"] = "name";
+    Sort["BooksCount"] = "booksCount";
+    Sort["ReadDate"] = "readProgress.readDate";
+    Sort["Number"] = "metadata.numberSort";
+})(Sort = exports.Sort || (exports.Sort = {}));
 exports.SortOptions = [
     {
-        id: "metadata.numberSort",
-        title: "Issue Number",
-    },
-    {
-        id: "name",
+        id: Sort.Name,
         title: "Name",
     },
     {
-        id: "readProgress.readDate",
-        title: "Reading Progress",
+        id: Sort.DateAdded,
+        title: "Date Added",
     },
     {
-        id: "metadata.releaseDate",
+        id: Sort.DateUpdated,
+        title: "Date Updated",
+    },
+    {
+        id: Sort.ReleaseDate,
         title: "Release Date",
     },
     {
-        id: "createdDate",
-        title: "Creation Date",
+        id: Sort.FolderName,
+        title: "Folder Name",
+    },
+    {
+        id: Sort.BooksCount,
+        title: "Books Count",
     },
 ];
 exports.RESULT_COUNT = 30;
-exports.DEFAULT_SORT = "metadata.numberSort";
+exports.DEFAULT_SORT = Sort.Name;
 
 },{}],20:[function(require,module,exports){
 "use strict";
