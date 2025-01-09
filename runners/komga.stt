@@ -1138,16 +1138,21 @@ const convertStatus = (val) => {
 const convertReadingMode = (val) => {
     val = val.toUpperCase();
     switch (val) {
-        case "LEFT_TO_RIGHT":
+        case "LEFT_TO_RIGHT": {
             return daisuke_1.ReadingMode.PAGED_MANGA;
-        case "RIGHT_TO_LEFT":
+        }
+        case "RIGHT_TO_LEFT": {
             return daisuke_1.ReadingMode.PAGED_COMIC;
-        case "VERTICAL":
+        }
+        case "VERTICAL": {
             return daisuke_1.ReadingMode.PAGED_VERTICAL;
-        case "WEBTOON":
+        }
+        case "WEBTOON": {
             return daisuke_1.ReadingMode.WEBTOON;
-        default:
-            return;
+        }
+        default: {
+            return undefined;
+        }
     }
 };
 
