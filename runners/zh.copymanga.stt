@@ -244,7 +244,7 @@ class Target {
         const creators = [];
         const info = [];
         let status = daisuke_1.PublicationStatus.ONGOING;
-        const categories = [];
+        const genres = [];
         for (const item of infoListItems) {
             const titleText = $(item).find("h6").text().trim();
             if (titleText) {
@@ -252,22 +252,24 @@ class Target {
                 continue;
             }
             const label = $(item).find("span").text().trim();
-            if (label.includes("别名")) {
+            if (label.includes("別名")) {
                 const text = $(item).find("p").text().trim();
                 const aliases = text.split(",").map((alias) => alias.trim());
                 additionalTitles.push(...aliases);
             }
             else if (label.includes("作者")) {
-                const creator = $(item).find("span a").text().trim();
-                creators.push(creator);
+                for (const creator of $(item).find("span a")) {
+                    const text = $(creator).text().trim();
+                    creators.push(text);
+                }
             }
             else if (label.includes("熱度")) {
                 const text = $(item).find("p span").text().trim();
-                info.push(`熱度: ${text}`);
+                info.push(`🔥熱度: ${text}`);
             }
             else if (label.includes("最後更新")) {
                 const text = $(item).find("p").text().trim();
-                info.push(`最後更新: ${text}`);
+                info.push(`🗓最後更新: ${text}`);
             }
             else if (label.includes("狀態")) {
                 const text = $(item).find("p").text().trim();
@@ -280,7 +282,13 @@ class Target {
             }
             else if (label.includes("題材")) {
                 const tags = $(item).find("span a");
-                categories.push(...tags.map((_, el) => $(el).text().trim()));
+                for (const tag of tags) {
+                    const text = $(tag).text().trim().replace("#", "");
+                    const alias = $(tag).attr("href")?.replace("/comics?theme=", "") ?? text;
+                    if (text) {
+                        genres.push({ id: alias, title: text });
+                    }
+                }
             }
         }
         const summary = $(".intro").text().trim();
@@ -291,12 +299,13 @@ class Target {
             creators,
             summary,
             status,
+            info,
             webUrl: url,
             properties: [
                 {
-                    id: "categories",
+                    id: "genres",
                     title: "題材",
-                    tags: categories.map((cat) => ({ id: cat, title: cat })),
+                    tags: genres,
                 },
             ],
         };
