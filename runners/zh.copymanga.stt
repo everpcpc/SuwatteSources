@@ -181,7 +181,7 @@ class Target {
     }
     // Search for manga
     async search(params) {
-        const url = `${constants_1.BASE_URL}/api/kb/web/searchc/comics`;
+        const url = `${constants_1.BASE_URL}/api/kb/web/searchbc/comics`;
         const response = await this.client.get(url, { params });
         const data = JSON.parse(response.data);
         const results = data.results.list;
