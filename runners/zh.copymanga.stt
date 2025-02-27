@@ -170,7 +170,9 @@ class Target {
     // Browse manga with filters
     async browse(params) {
         const url = `${constants_1.BASE_URL}/comics`;
+        console.log(`browse with params: ${JSON.stringify(params)}`);
         const response = await this.client.get(url, { params });
+        console.log(`response: ${JSON.stringify(response)}`);
         // Parse HTML response to extract manga list
         const html = response.data;
         // Extract manga list from HTML
