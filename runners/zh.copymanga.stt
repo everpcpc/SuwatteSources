@@ -234,7 +234,7 @@ class Target {
         // Use cheerio to parse HTML
         const $ = cheerio.load(html);
         // Extract cover
-        const coverElement = $("comicParticulars-left-img img.lazyload");
+        const coverElement = $(".comicParticulars-title-left img.lazyload");
         const coverSrc = coverElement.data("data-src");
         const cover = coverSrc ? coverSrc.replace(".328x422.jpg", "") : "";
         const infoListItems = $(".comicParticulars-title-right ul li");
