@@ -170,13 +170,10 @@ class Target {
     client = new NetworkClient();
     // Get manga list based on filters and page
     async getDirectory(request) {
-        // Parse search request to URL parameters
         const params = (0, utils_1.parseSearchRequest)(request);
-        // If it's a search query
         if (params.q) {
             return this.search(params);
         }
-        // If it's a filtered browse
         return this.browse(params);
     }
     // Search for manga
@@ -196,26 +193,19 @@ class Target {
         const url = `${constants_1.BASE_URL}/comics`;
         console.log(`browse with params: ${JSON.stringify(params)}`);
         const response = await this.client.get(url, { params });
-        // Parse HTML response to extract manga list
         const html = response.data;
-        // Use cheerio to parse HTML instead of regex
         const $ = cheerio.load(html);
-        // Find the manga list data
         const mangaListElement = $(".exemptComic-box");
         if (!mangaListElement.length) {
             return { results: [], isLastPage: true };
         }
-        // Get the list attribute which contains the manga data
         const mangaListStr = mangaListElement.attr("list");
         if (!mangaListStr) {
             return { results: [], isLastPage: true };
         }
-        // Process the string to make it valid JSON
         const processedStr = mangaListStr.replace(/\\xa0/g, " ").replace(/'/g, '"');
         try {
-            // Parse the JSON string
             const mangaList = JSON.parse(processedStr);
-            // Check if there's a next page by looking for pagination
             const paginationItems = $(".page-all-item");
             const lastPageItem = paginationItems.last();
             const hasMore = paginationItems.length > 0 && !lastPageItem.hasClass("active");
@@ -313,15 +303,12 @@ class Target {
     async getChapters(contentId) {
         const url = `${constants_1.BASE_URL}/comicdetail/${contentId}/chapters`;
         const response = await this.client.get(url);
-        // Extract chapter list from response
         const resultsMatch = response.data.match(/"results":"([^"]+)"/);
         if (!resultsMatch || !resultsMatch[1]) {
             return [];
         }
-        // Decrypt the chapter list
         const encryptedResults = resultsMatch[1];
         const decryptedResults = (0, utils_1.decryptString)(encryptedResults);
-        // Parse the decrypted results
         try {
             const chapterListData = JSON.parse(decryptedResults);
             return (0, utils_1.chapterGroupsToChapters)(chapterListData.groups, contentId);
@@ -335,29 +322,22 @@ class Target {
     async getChapterData(contentId, chapterId) {
         const url = `${constants_1.BASE_URL}/comic/${contentId}/chapter/${chapterId}`;
         const response = await this.client.get(url);
-        // Use cheerio to parse HTML
         const $ = cheerio.load(response.data);
-        // Extract page list from response
         const imageDataElement = $(".imageData");
         if (!imageDataElement.length) {
             return { pages: [] };
         }
-        // Get the contentkey attribute which contains the encrypted page data
         const encryptedContentKey = imageDataElement.attr("contentkey");
         if (!encryptedContentKey) {
             return { pages: [] };
         }
-        // Decrypt the page list
         const decryptedContentKey = (0, utils_1.decryptString)(encryptedContentKey);
-        // Parse the decrypted content key
         try {
             const pageList = JSON.parse(decryptedContentKey);
-            // Get image format and quality from preferences
-            // In a real implementation, you would get these from user preferences
+            // TODO: make this configurable
             const imageFormat = "jpg";
             const imageQuality = "c800x";
             const imageExt = `${imageQuality}.${imageFormat}`;
-            // Map page list to pages
             const pages = pageList.map((page, index) => ({
                 index,
                 url: page.url.replace("c800x.jpg", imageExt),
@@ -457,14 +437,12 @@ const daisuke_1 = require("@suwatte/daisuke");
 const types_1 = require("./types");
 const constants_1 = require("./constants");
 const crypto_js_1 = __importDefault(require("crypto-js"));
-// Decrypt encrypted string (from decryptor.rs)
 const decryptString = (encryptedString) => {
     try {
         const iv = encryptedString.substring(0, 16);
         const hexCiphertext = encryptedString.substring(16);
         const key = crypto_js_1.default.enc.Utf8.parse(constants_1.DECRYPT_KEY);
         const ivBytes = crypto_js_1.default.enc.Utf8.parse(iv);
-        // Create a proper CipherParams object
         const cipherParams = crypto_js_1.default.lib.CipherParams.create({
             ciphertext: crypto_js_1.default.enc.Hex.parse(hexCiphertext),
         });
@@ -489,11 +467,9 @@ const parseSearchRequest = (request) => {
         limit: constants_1.LIMIT,
         offset,
     };
-    // Add query if present
     if (request.query) {
         params.q = request.query;
     }
-    // Add filters if present
     if (request.filters) {
         const { theme, status, region } = request.filters;
         if (theme)
@@ -503,7 +479,6 @@ const parseSearchRequest = (request) => {
         if (region)
             params.region = region;
     }
-    // Add sort if present
     if (request.sort) {
         if (request.sort.ascending) {
             params.ordering = request.sort.id;
@@ -541,14 +516,12 @@ const convertStatus = (statusCode) => {
         case types_1.Status.OneShot:
             return daisuke_1.PublicationStatus.COMPLETED;
         default:
-            // Handle unknown status
             return daisuke_1.PublicationStatus.ONGOING; // Default to ONGOING if unknown
     }
 };
 exports.convertStatus = convertStatus;
 // Parse chapter title to extract volume and chapter numbers
 const parseChapterTitle = (title) => {
-    // Handle special cases
     if (title === "全一卷") {
         return {
             volume: 1,
@@ -562,7 +535,6 @@ const parseChapterTitle = (title) => {
             title,
         };
     }
-    // Regular expression to match volume, chapter, and part
     const regex = /^(单行本：)?(第?(?<volume>[\d零一二三四五六七八九十百千]+(\.\d)?)[卷部季]完?)?((第|连载|CH)?(?<chapter>[\d零一二三四五六七八九十百千]+([-.]\d+)?)[話话回]?(-?[(（]?(?<part>([前中后上下]|\d+))[)）]?篇?)?(试看)?)?(\s.*|$)/;
     const match = regex.exec(title);
     if (!match || !match.groups) {
@@ -571,12 +543,9 @@ const parseChapterTitle = (title) => {
             title,
         };
     }
-    // Convert Chinese numerals to Arabic numerals
     const getNumber = (str) => {
         if (!str)
             return;
-        // Simple conversion for Chinese numerals (simplified implementation)
-        // In a real implementation, you would use a proper Chinese numeral conversion library
         const chineseToArabic = {
             零: 0,
             一: 1,
@@ -592,13 +561,10 @@ const parseChapterTitle = (title) => {
             百: 100,
             千: 1000,
         };
-        // Check if it's a simple Arabic numeral
         const numericValue = parseFloat(str);
         if (!isNaN(numericValue)) {
             return numericValue;
         }
-        // Very simplified Chinese numeral conversion (only works for simple cases)
-        // For a complete solution, use a dedicated library
         let result = 0;
         let temp = 0;
         for (let i = 0; i < str.length; i++) {
@@ -615,7 +581,6 @@ const parseChapterTitle = (title) => {
         return result + temp;
     };
     const volume = getNumber(match.groups.volume);
-    // Handle part (前/中/后/上/下)
     const part = match.groups.part
         ? match.groups.part === "前" || match.groups.part === "上"
             ? "0"
@@ -625,7 +590,6 @@ const parseChapterTitle = (title) => {
                     ? "5"
                     : match.groups.part
         : "0";
-    // Calculate chapter number
     let chapter = getNumber(match.groups.chapter);
     if (chapter !== undefined && part) {
         const chapterStr = `${chapter}${chapter % 1 === 0 ? "." : ""}${part}`;
@@ -641,8 +605,6 @@ exports.parseChapterTitle = parseChapterTitle;
 // Get timestamp from UUID
 const getTimestampFromUuid = (_) => {
     try {
-        // In a real implementation, you would need to properly extract the timestamp from the UUID
-        // This is a simplified version that just returns the current timestamp
         return Date.now() / 1000;
     }
     catch (error) {
@@ -653,13 +615,10 @@ const getTimestampFromUuid = (_) => {
 exports.getTimestampFromUuid = getTimestampFromUuid;
 // Convert chapter groups to chapters array
 const chapterGroupsToChapters = (groups, mangaId) => {
-    // Collect all chapters from all groups
     const allChapters = [];
-    // Process each group
     Object.values(groups).forEach((group) => {
         const groupName = group.name;
         const titlePrefix = groupName === "默認" ? "" : `${groupName}：`;
-        // Process chapters in this group
         group.chapters.forEach((chapter) => {
             const chapterId = chapter.id;
             const title = `${titlePrefix}${chapter.name}`;
@@ -677,9 +636,7 @@ const chapterGroupsToChapters = (groups, mangaId) => {
             }
         });
     });
-    // Sort chapters by timestamp (newest first)
     allChapters.sort((a, b) => b.timestamp - a.timestamp);
-    // Convert to Chapter objects
     return allChapters.map((chapterInfo, index) => {
         const part = (0, exports.parseChapterTitle)(chapterInfo.title);
         return {
