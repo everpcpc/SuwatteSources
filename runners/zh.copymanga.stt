@@ -234,61 +234,67 @@ class Target {
         // Use cheerio to parse HTML
         const $ = cheerio.load(html);
         // Extract cover
-        const coverElement = $(".comicInfo-l img.lazyload");
-        const coverSrc = coverElement.data("src");
+        const coverElement = $("comicParticulars-left-img img.lazyload");
+        const coverSrc = coverElement.data("data-src");
         const cover = coverSrc ? coverSrc.replace(".328x422.jpg", "") : "";
-        // Extract title
-        const title = $("h6.comicInfo-title").text().trim();
-        // Extract artist
-        const artistElement = $(".comicInfo-r .comicInfo-item").filter((_, el) => {
-            return $(el).find(".comicInfo-item-label").text().includes("作者");
-        });
-        const artist = artistElement
-            .find(".comicInfo-item-text")
-            .text()
-            .trim()
-            .split("、")
-            .join(", ");
-        // Extract description
-        const description = $(".intro").text().trim();
-        // Extract categories
+        const infoListItems = $(".comicParticulars-left-info ul li");
+        let title = "";
+        const additionalTitles = [];
+        const creators = [];
+        const info = [];
+        let status = daisuke_1.PublicationStatus.ONGOING;
         const categories = [];
-        $(".comicInfo-r .comicInfo-item")
-            .filter((_, el) => {
-            return $(el).find(".comicInfo-item-label").text().includes("分類");
-        })
-            .find(".comicInfo-item-tag")
-            .each((_, el) => {
-            categories.push($(el).text().trim());
-        });
-        // Extract status
-        let status = daisuke_1.PublicationStatus.ONGOING; // Default to ongoing
-        $(".comicInfo-r .comicInfo-item")
-            .filter((_, el) => {
-            return $(el).find(".comicInfo-item-label").text().includes("狀態");
-        })
-            .find(".comicInfo-item-text")
-            .each((_, el) => {
-            const statusStr = $(el).text().trim();
-            status =
-                statusStr === "連載中"
-                    ? daisuke_1.PublicationStatus.ONGOING
-                    : statusStr === "已完結" || statusStr === "短篇"
-                        ? daisuke_1.PublicationStatus.COMPLETED
-                        : daisuke_1.PublicationStatus.ONGOING;
-        });
+        for (const item of infoListItems) {
+            const titleText = $(item).find("h6").text().trim();
+            if (titleText) {
+                title = titleText;
+                continue;
+            }
+            const label = $(item).find("span").text().trim();
+            if (label.includes("别名")) {
+                const text = $(item).find("p").text().trim();
+                const aliases = text.split(",").map((alias) => alias.trim());
+                additionalTitles.push(...aliases);
+            }
+            else if (label.includes("作者")) {
+                const creator = $(item).find("span a").text().trim();
+                creators.push(creator);
+            }
+            else if (label.includes("熱度")) {
+                const text = $(item).find("p span").text().trim();
+                info.push(`熱度: ${text}`);
+            }
+            else if (label.includes("最後更新")) {
+                const text = $(item).find("p").text().trim();
+                info.push(`最後更新: ${text}`);
+            }
+            else if (label.includes("狀態")) {
+                const text = $(item).find("p").text().trim();
+                status =
+                    text === "連載中"
+                        ? daisuke_1.PublicationStatus.ONGOING
+                        : text === "已完結" || text === "短篇"
+                            ? daisuke_1.PublicationStatus.COMPLETED
+                            : daisuke_1.PublicationStatus.ONGOING;
+            }
+            else if (label.includes("題材")) {
+                const tags = $(item).find("span a");
+                categories.push(...tags.map((tag) => tag.text().trim()));
+            }
+        }
+        const summary = $(".intro").text().trim();
         return {
             title,
+            additionalTitles,
             cover,
-            creators: [artist],
-            summary: description,
+            creators,
+            summary,
             status,
             webUrl: url,
-            // Create properties attribute to replace tags
             properties: [
                 {
                     id: "categories",
-                    title: "分类",
+                    title: "題材",
                     tags: categories.map((cat) => ({ id: cat, title: cat })),
                 },
             ],
