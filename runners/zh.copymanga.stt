@@ -471,8 +471,12 @@ const parseSearchRequest = (request) => {
     }
     // Add sort if present
     if (request.sort) {
-        // Convert SortSelection to string
-        params.ordering = String(request.sort);
+        if (request.sort.ascending) {
+            params.ordering = request.sort.id;
+        }
+        else {
+            params.ordering = `-${request.sort.id}`;
+        }
     }
     return params;
 };
