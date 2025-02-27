@@ -237,7 +237,7 @@ class Target {
         const coverElement = $("comicParticulars-left-img img.lazyload");
         const coverSrc = coverElement.data("data-src");
         const cover = coverSrc ? coverSrc.replace(".328x422.jpg", "") : "";
-        const infoListItems = $(".comicParticulars-left-info ul li");
+        const infoListItems = $(".comicParticulars-title-right ul li");
         console.log(`infoListItems: ${infoListItems.length}`);
         let title = "";
         const additionalTitles = [];
