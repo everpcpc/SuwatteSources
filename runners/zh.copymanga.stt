@@ -238,6 +238,7 @@ class Target {
         const coverSrc = coverElement.data("data-src");
         const cover = coverSrc ? coverSrc.replace(".328x422.jpg", "") : "";
         const infoListItems = $(".comicParticulars-left-info ul li");
+        console.log(`infoListItems: ${infoListItems.length}`);
         let title = "";
         const additionalTitles = [];
         const creators = [];
