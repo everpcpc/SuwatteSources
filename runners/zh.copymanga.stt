@@ -552,13 +552,12 @@ const parseChapterTitle = (title) => {
     if (title === "全一卷") {
         return {
             volume: 1,
-            chapter: -1,
+            chapter: 0,
             title,
         };
     }
     if (title === "全一話" || title === "全一话") {
         return {
-            volume: -1,
             chapter: 1,
             title,
         };
@@ -568,15 +567,14 @@ const parseChapterTitle = (title) => {
     const match = regex.exec(title);
     if (!match || !match.groups) {
         return {
-            volume: -1,
-            chapter: -1,
+            chapter: 0,
             title,
         };
     }
     // Convert Chinese numerals to Arabic numerals
     const getNumber = (str) => {
         if (!str)
-            return -1;
+            return;
         // Simple conversion for Chinese numerals (simplified implementation)
         // In a real implementation, you would use a proper Chinese numeral conversion library
         const chineseToArabic = {
@@ -614,7 +612,7 @@ const parseChapterTitle = (title) => {
                 temp = value;
             }
         }
-        return result + temp || -1;
+        return result + temp;
     };
     const volume = getNumber(match.groups.volume);
     // Handle part (前/中/后/上/下)
@@ -629,13 +627,13 @@ const parseChapterTitle = (title) => {
         : "0";
     // Calculate chapter number
     let chapter = getNumber(match.groups.chapter);
-    if (chapter !== -1 && part) {
+    if (chapter !== undefined && part) {
         const chapterStr = `${chapter}${chapter % 1 === 0 ? "." : ""}${part}`;
         chapter = parseFloat(chapterStr);
     }
     return {
         volume,
-        chapter,
+        chapter: chapter ?? 0,
         title,
     };
 };
