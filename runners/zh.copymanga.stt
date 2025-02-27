@@ -427,7 +427,6 @@ var Sort;
 })(Sort = exports.Sort || (exports.Sort = {}));
 
 },{}],4:[function(require,module,exports){
-(function (process){(function (){
 "use strict";
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
@@ -606,21 +605,42 @@ exports.parseChapterTitle = parseChapterTitle;
 // Get timestamp from UUID
 // 43acc6f8-5d5d-11ee-9412-d3d228a76de6
 const getTimestampFromUuid = (uuid) => {
-    const nanoTime = BigInt(Date.now() * 1000000) +
-        (process.hrtime.bigint() - process.hrtime.bigint());
-    let tl = String(nanoTime).length;
-    let ts = "";
-    let i = -1;
-    while (tl--) {
-        i++;
-        if (i === 8 || i === 13 || i === 14 || i === 18 || i === 19 || i === 23) {
-            tl++;
-            continue;
+    try {
+        // 验证UUID格式
+        if (!uuid.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i)) {
+            throw new Error("Invalid UUID format");
         }
-        ts += uuid[i];
+        // 检查是否是版本1的UUID
+        const version = uuid.charAt(14);
+        if (version !== "1") {
+            throw new Error("Not a version 1 UUID");
+        }
+        // 从UUID v1中提取时间戳部分
+        // 时间低位（time_low）
+        const timeLow = parseInt(uuid.substring(0, 8), 16);
+        // 时间中位（time_mid）
+        const timeMid = parseInt(uuid.substring(9, 13), 16);
+        // 时间高位和版本（time_hi_and_version）- 需要去掉版本信息
+        const timeHiAndVersion = parseInt(uuid.substring(15, 18), 16);
+        // 组合时间戳（以100纳秒为单位）
+        // 格式：time_low + time_mid * 2^32 + (time_hi_and_version & 0x0FFF) * 2^48
+        const timestamp = timeLow + timeMid * Math.pow(2, 32) + timeHiAndVersion * Math.pow(2, 48);
+        // UUID v1的时间戳是自1582-10-15 00:00:00以来的100纳秒间隔数
+        // 转换为Unix时间戳（毫秒）
+        const gregorianEpochInUnixTime = -12219292800000; // 1582-10-15 00:00:00 UTC in Unix time
+        const unixTimestamp = gregorianEpochInUnixTime + timestamp / 10000;
+        return unixTimestamp;
     }
-    const nanoTimestamp = BigInt(ts);
-    return Number(nanoTimestamp / BigInt(1000000));
+    catch (error) {
+        if (error instanceof Error) {
+            console.error("Error extracting timestamp from UUID:", error.message);
+            throw new Error(error.message);
+        }
+        else {
+            console.error("Unknown error extracting timestamp from UUID");
+            throw new Error("Failed to extract timestamp from UUID");
+        }
+    }
 };
 exports.getTimestampFromUuid = getTimestampFromUuid;
 // Convert chapter groups to chapters array
@@ -679,8 +699,7 @@ const createNetworkRequest = (url) => {
 };
 exports.createNetworkRequest = createNetworkRequest;
 
-}).call(this)}).call(this,require('_process'))
-},{"./constants":1,"./types":3,"@suwatte/daisuke":5,"_process":69,"crypto-js":undefined}],5:[function(require,module,exports){
+},{"./constants":1,"./types":3,"@suwatte/daisuke":5,"crypto-js":undefined}],5:[function(require,module,exports){
 "use strict";
 var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
     if (k2 === undefined) k2 = k;
@@ -1417,192 +1436,6 @@ var TrackStatus;
     TrackStatus["DROPPED"] = "DROPPED";
     TrackStatus["REREADING"] = "REREADING";
 })(TrackStatus || (exports.TrackStatus = TrackStatus = {}));
-
-},{}],69:[function(require,module,exports){
-// shim for using process in browser
-var process = module.exports = {};
-
-// cached from whatever global is present so that test runners that stub it
-// don't break things.  But we need to wrap it in a try catch in case it is
-// wrapped in strict mode code which doesn't define any globals.  It's inside a
-// function because try/catches deoptimize in certain engines.
-
-var cachedSetTimeout;
-var cachedClearTimeout;
-
-function defaultSetTimout() {
-    throw new Error('setTimeout has not been defined');
-}
-function defaultClearTimeout () {
-    throw new Error('clearTimeout has not been defined');
-}
-(function () {
-    try {
-        if (typeof setTimeout === 'function') {
-            cachedSetTimeout = setTimeout;
-        } else {
-            cachedSetTimeout = defaultSetTimout;
-        }
-    } catch (e) {
-        cachedSetTimeout = defaultSetTimout;
-    }
-    try {
-        if (typeof clearTimeout === 'function') {
-            cachedClearTimeout = clearTimeout;
-        } else {
-            cachedClearTimeout = defaultClearTimeout;
-        }
-    } catch (e) {
-        cachedClearTimeout = defaultClearTimeout;
-    }
-} ())
-function runTimeout(fun) {
-    if (cachedSetTimeout === setTimeout) {
-        //normal enviroments in sane situations
-        return setTimeout(fun, 0);
-    }
-    // if setTimeout wasn't available but was latter defined
-    if ((cachedSetTimeout === defaultSetTimout || !cachedSetTimeout) && setTimeout) {
-        cachedSetTimeout = setTimeout;
-        return setTimeout(fun, 0);
-    }
-    try {
-        // when when somebody has screwed with setTimeout but no I.E. maddness
-        return cachedSetTimeout(fun, 0);
-    } catch(e){
-        try {
-            // When we are in I.E. but the script has been evaled so I.E. doesn't trust the global object when called normally
-            return cachedSetTimeout.call(null, fun, 0);
-        } catch(e){
-            // same as above but when it's a version of I.E. that must have the global object for 'this', hopfully our context correct otherwise it will throw a global error
-            return cachedSetTimeout.call(this, fun, 0);
-        }
-    }
-
-
-}
-function runClearTimeout(marker) {
-    if (cachedClearTimeout === clearTimeout) {
-        //normal enviroments in sane situations
-        return clearTimeout(marker);
-    }
-    // if clearTimeout wasn't available but was latter defined
-    if ((cachedClearTimeout === defaultClearTimeout || !cachedClearTimeout) && clearTimeout) {
-        cachedClearTimeout = clearTimeout;
-        return clearTimeout(marker);
-    }
-    try {
-        // when when somebody has screwed with setTimeout but no I.E. maddness
-        return cachedClearTimeout(marker);
-    } catch (e){
-        try {
-            // When we are in I.E. but the script has been evaled so I.E. doesn't  trust the global object when called normally
-            return cachedClearTimeout.call(null, marker);
-        } catch (e){
-            // same as above but when it's a version of I.E. that must have the global object for 'this', hopfully our context correct otherwise it will throw a global error.
-            // Some versions of I.E. have different rules for clearTimeout vs setTimeout
-            return cachedClearTimeout.call(this, marker);
-        }
-    }
-
-
-
-}
-var queue = [];
-var draining = false;
-var currentQueue;
-var queueIndex = -1;
-
-function cleanUpNextTick() {
-    if (!draining || !currentQueue) {
-        return;
-    }
-    draining = false;
-    if (currentQueue.length) {
-        queue = currentQueue.concat(queue);
-    } else {
-        queueIndex = -1;
-    }
-    if (queue.length) {
-        drainQueue();
-    }
-}
-
-function drainQueue() {
-    if (draining) {
-        return;
-    }
-    var timeout = runTimeout(cleanUpNextTick);
-    draining = true;
-
-    var len = queue.length;
-    while(len) {
-        currentQueue = queue;
-        queue = [];
-        while (++queueIndex < len) {
-            if (currentQueue) {
-                currentQueue[queueIndex].run();
-            }
-        }
-        queueIndex = -1;
-        len = queue.length;
-    }
-    currentQueue = null;
-    draining = false;
-    runClearTimeout(timeout);
-}
-
-process.nextTick = function (fun) {
-    var args = new Array(arguments.length - 1);
-    if (arguments.length > 1) {
-        for (var i = 1; i < arguments.length; i++) {
-            args[i - 1] = arguments[i];
-        }
-    }
-    queue.push(new Item(fun, args));
-    if (queue.length === 1 && !draining) {
-        runTimeout(drainQueue);
-    }
-};
-
-// v8 likes predictible objects
-function Item(fun, array) {
-    this.fun = fun;
-    this.array = array;
-}
-Item.prototype.run = function () {
-    this.fun.apply(null, this.array);
-};
-process.title = 'browser';
-process.browser = true;
-process.env = {};
-process.argv = [];
-process.version = ''; // empty string to avoid regexp issues
-process.versions = {};
-
-function noop() {}
-
-process.on = noop;
-process.addListener = noop;
-process.once = noop;
-process.off = noop;
-process.removeListener = noop;
-process.removeAllListeners = noop;
-process.emit = noop;
-process.prependListener = noop;
-process.prependOnceListener = noop;
-
-process.listeners = function (name) { return [] }
-
-process.binding = function (name) {
-    throw new Error('process.binding is not supported');
-};
-
-process.cwd = function () { return '/' };
-process.chdir = function (dir) {
-    throw new Error('process.chdir is not supported');
-};
-process.umask = function() { return 0; };
 
 },{}]},{},[2])(2)
 });
