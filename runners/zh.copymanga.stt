@@ -603,14 +603,21 @@ const parseChapterTitle = (title) => {
 };
 exports.parseChapterTitle = parseChapterTitle;
 // Get timestamp from UUID
-const getTimestampFromUuid = (_) => {
-    try {
-        return Date.now() / 1000;
-    }
-    catch (error) {
-        console.error("UUID parsing error:", error);
-        throw new Error("Failed to parse UUID to timestamp");
-    }
+const getTimestampFromUuid = (uuid) => {
+    // Remove hyphens and convert to lowercase
+    const cleanUuid = uuid.replace(/-/g, "").toLowerCase();
+    // UUID v1 time bits are in positions 0-7 (time_low), 8-11 (time_mid), and 12-15 (time_high)
+    // Extract the time components from the UUID
+    const timeLow = parseInt(cleanUuid.substring(0, 8), 16);
+    const timeMid = parseInt(cleanUuid.substring(8, 12), 16);
+    const timeHigh = parseInt(cleanUuid.substring(12, 16), 16) & 0x0fff; // Mask out version bits
+    // Combine the time components
+    // The time in UUID is 100-nanosecond intervals since 15 October 1582
+    const uuidEpoch = 12219292800000; // Milliseconds between UUID epoch and Unix epoch
+    const uuidTime = ((timeHigh << 48) | (timeMid << 32) | timeLow) / 10000;
+    // Convert to Unix timestamp (milliseconds since 1 January 1970)
+    const unixTime = (uuidTime - uuidEpoch) / 1000;
+    return unixTime;
 };
 exports.getTimestampFromUuid = getTimestampFromUuid;
 // Convert chapter groups to chapters array
