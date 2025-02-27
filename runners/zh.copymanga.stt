@@ -126,11 +126,35 @@ exports.BASE_URL = "https://copymanga.tv";
 
 },{"@suwatte/daisuke":5}],2:[function(require,module,exports){
 "use strict";
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Target = exports.info = void 0;
 const daisuke_1 = require("@suwatte/daisuke");
 const constants_1 = require("./constants");
 const utils_1 = require("./utils");
+const cheerio = __importStar(require("cheerio"));
 exports.info = {
     id: "zh.copymanga",
     name: "拷贝漫画",
@@ -172,42 +196,29 @@ class Target {
         const url = `${constants_1.BASE_URL}/comics`;
         console.log(`browse with params: ${JSON.stringify(params)}`);
         const response = await this.client.get(url, { params });
-        console.log(`response: ${JSON.stringify(response)}`);
         // Parse HTML response to extract manga list
         const html = response.data;
-        // Extract manga list from HTML
-        // This is a simplified implementation
-        // In a real implementation, you would need to properly parse the HTML
-        const mangaListMatch = html.match(/div class="exemptComic-box" list="([^"]+)"/);
-        if (!mangaListMatch || !mangaListMatch[1]) {
+        // Use cheerio to parse HTML instead of regex
+        const $ = cheerio.load(html);
+        // Find the manga list data
+        const mangaListElement = $(".exemptComic-box");
+        if (!mangaListElement.length) {
             return { results: [], isLastPage: true };
         }
-        let mangaListStr = mangaListMatch[1].replace(/\\xa0/g, " ");
+        // Get the list attribute which contains the manga data
+        const mangaListStr = mangaListElement.attr("list");
+        if (!mangaListStr) {
+            return { results: [], isLastPage: true };
+        }
         // Process the string to make it valid JSON
-        mangaListStr = mangaListStr
-            .split('"')
-            .map((str, index) => {
-            if (index % 2 === 0) {
-                return str.replace(/'/g, '"');
-            }
-            else if (!str.includes("'")) {
-                return `\\"${str}\\"`;
-            }
-            else {
-                return str;
-            }
-        })
-            .join('"')
-            .replace(/"\\"/, '\\"')
-            .replace(/\\"/g, '"');
+        const processedStr = mangaListStr.replace(/\\xa0/g, " ").replace(/'/g, '"');
         try {
-            const mangaList = JSON.parse(mangaListStr);
-            // Check if there's a next page
-            const hasMoreMatch = html.match(/li class="page-all-item"[^>]*>([^<]+)<\/li>/g);
-            // 修复 null 类型问题
-            const hasMore = hasMoreMatch
-                ? !hasMoreMatch[hasMoreMatch.length - 1].includes('class="active"')
-                : false;
+            // Parse the JSON string
+            const mangaList = JSON.parse(processedStr);
+            // Check if there's a next page by looking for pagination
+            const paginationItems = $(".page-all-item");
+            const lastPageItem = paginationItems.last();
+            const hasMore = paginationItems.length > 0 && !lastPageItem.hasClass("active");
             return (0, utils_1.mangaListToPageResult)(mangaList, hasMore);
         }
         catch (error) {
@@ -220,50 +231,52 @@ class Target {
         const url = `${constants_1.BASE_URL}/comic/${contentId}`;
         const response = await this.client.get(url);
         const html = response.data;
-        // Extract manga details from HTML
-        // This is a simplified implementation
-        // In a real implementation, you would need to properly parse the HTML
+        // Use cheerio to parse HTML
+        const $ = cheerio.load(html);
         // Extract cover
-        const coverMatch = html.match(/img class="lazyload" data-src="([^"]+)"/);
-        const cover = coverMatch ? coverMatch[1].replace(".328x422.jpg", "") : "";
+        const coverElement = $(".comicInfo-l img.lazyload");
+        const coverSrc = coverElement.data("src");
+        const cover = coverSrc ? coverSrc.replace(".328x422.jpg", "") : "";
         // Extract title
-        const titleMatch = html.match(/<h6[^>]*>([^<]+)<\/h6>/);
-        const title = titleMatch ? titleMatch[1] : "";
+        const title = $("h6.comicInfo-title").text().trim();
         // Extract artist
-        const artistMatch = html.match(/span class="comicParticulars-right-txt"[^>]*>(.*?)<\/span>/g);
-        const artist = artistMatch
-            ? artistMatch[0]
-                .replace(/<[^>]+>/g, "")
-                .split("、")
-                .join(", ")
-            : "";
+        const artistElement = $(".comicInfo-r .comicInfo-item").filter((_, el) => {
+            return $(el).find(".comicInfo-item-label").text().includes("作者");
+        });
+        const artist = artistElement
+            .find(".comicInfo-item-text")
+            .text()
+            .trim()
+            .split("、")
+            .join(", ");
         // Extract description
-        const descMatch = html.match(/<p class="intro"[^>]*>(.*?)<\/p>/s);
-        const description = descMatch ? descMatch[1].trim() : "";
+        const description = $(".intro").text().trim();
         // Extract categories
-        const categoriesMatch = html.match(/span class="comicParticulars-left-theme-all comicParticulars-tag"[^>]*>(.*?)<\/span>/g);
-        const categories = categoriesMatch
-            ? categoriesMatch
-                .map((cat) => {
-                const match = cat.match(/>([^<]+)</);
-                return match ? match[1].substring(1) : "";
-            })
-                .filter(Boolean)
-            : [];
+        const categories = [];
+        $(".comicInfo-r .comicInfo-item")
+            .filter((_, el) => {
+            return $(el).find(".comicInfo-item-label").text().includes("分類");
+        })
+            .find(".comicInfo-item-tag")
+            .each((_, el) => {
+            categories.push($(el).text().trim());
+        });
         // Extract status
-        const statusMatch = html.match(/li:contains\(狀態：\) > span class="comicParticulars-right-txt"[^>]*>([^<]+)<\/span>/);
-        // 修复 UNKNOWN 不存在的问题
-        let status = daisuke_1.PublicationStatus.ONGOING; // 默认为连载中
-        if (statusMatch) {
-            const statusStr = statusMatch[1];
+        let status = daisuke_1.PublicationStatus.ONGOING; // Default to ongoing
+        $(".comicInfo-r .comicInfo-item")
+            .filter((_, el) => {
+            return $(el).find(".comicInfo-item-label").text().includes("狀態");
+        })
+            .find(".comicInfo-item-text")
+            .each((_, el) => {
+            const statusStr = $(el).text().trim();
             status =
                 statusStr === "連載中"
                     ? daisuke_1.PublicationStatus.ONGOING
                     : statusStr === "已完結" || statusStr === "短篇"
                         ? daisuke_1.PublicationStatus.COMPLETED
-                        : daisuke_1.PublicationStatus.ONGOING; // 默认为连载中
-        }
-        // 根据 Suwatte 的 Content 类型构建返回值
+                        : daisuke_1.PublicationStatus.ONGOING;
+        });
         return {
             title,
             cover,
@@ -271,7 +284,7 @@ class Target {
             summary: description,
             status,
             webUrl: url,
-            // 创建 properties 属性来替代 tags
+            // Create properties attribute to replace tags
             properties: [
                 {
                     id: "categories",
@@ -307,13 +320,19 @@ class Target {
     async getChapterData(contentId, chapterId) {
         const url = `${constants_1.BASE_URL}/comic/${contentId}/chapter/${chapterId}`;
         const response = await this.client.get(url);
+        // Use cheerio to parse HTML
+        const $ = cheerio.load(response.data);
         // Extract page list from response
-        const contentKeyMatch = response.data.match(/div class="imageData" contentkey="([^"]+)"/);
-        if (!contentKeyMatch || !contentKeyMatch[1]) {
+        const imageDataElement = $(".imageData");
+        if (!imageDataElement.length) {
+            return { pages: [] };
+        }
+        // Get the contentkey attribute which contains the encrypted page data
+        const encryptedContentKey = imageDataElement.attr("contentkey");
+        if (!encryptedContentKey) {
             return { pages: [] };
         }
         // Decrypt the page list
-        const encryptedContentKey = contentKeyMatch[1];
         const decryptedContentKey = (0, utils_1.decryptString)(encryptedContentKey);
         // Parse the decrypted content key
         try {
@@ -379,7 +398,7 @@ class Target {
 }
 exports.Target = Target;
 
-},{"./constants":1,"./utils":4,"@suwatte/daisuke":5}],3:[function(require,module,exports){
+},{"./constants":1,"./utils":4,"@suwatte/daisuke":5,"cheerio":undefined}],3:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Sort = exports.Region = exports.Status = exports.SearchType = void 0;
