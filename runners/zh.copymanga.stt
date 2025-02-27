@@ -87,7 +87,7 @@ const getProperties = () => {
     // Theme
     properties.push({
         id: "theme",
-        title: "主題",
+        title: "題材",
         tags: exports.THEME_OPTIONS,
     });
     // Status
@@ -231,28 +231,25 @@ class Target {
         const url = `${constants_1.BASE_URL}/comic/${contentId}`;
         const response = await this.client.get(url);
         const html = response.data;
-        // Use cheerio to parse HTML
         const $ = cheerio.load(html);
-        // Extract cover
         const coverElement = $(".comicParticulars-title-left img.lazyload");
-        const coverSrc = coverElement.data("data-src");
+        const coverSrc = coverElement.data("src");
         const cover = coverSrc ? coverSrc.replace(".328x422.jpg", "") : "";
-        const infoListItems = $(".comicParticulars-title-right ul li");
-        console.log(`infoListItems: ${infoListItems.length}`);
         let title = "";
         const additionalTitles = [];
         const creators = [];
         const info = [];
         let status = daisuke_1.PublicationStatus.ONGOING;
-        const genres = [];
+        const themes = [];
         const recommendedPanelMode = daisuke_1.ReadingMode.PAGED_MANGA;
+        const infoListItems = $(".comicParticulars-title-right ul li");
         for (const item of infoListItems) {
             const titleText = $(item).find("h6").text().trim();
             if (titleText) {
                 title = titleText;
                 continue;
             }
-            const label = $(item).find("span").text().trim();
+            const label = $(item).find("span").first().text().trim();
             if (label.includes("別名")) {
                 const text = $(item).find("p").text().trim();
                 const aliases = text.split(",").map((alias) => alias.trim());
@@ -265,15 +262,15 @@ class Target {
                 }
             }
             else if (label.includes("熱度")) {
-                const text = $(item).find("p span").text().trim();
+                const text = $(item).find(".comicParticulars-right-txt").text().trim();
                 info.push(`🔥熱度: ${text}`);
             }
             else if (label.includes("最後更新")) {
-                const text = $(item).find("p").text().trim();
+                const text = $(item).find(".comicParticulars-right-txt").text().trim();
                 info.push(`🗓最後更新: ${text}`);
             }
             else if (label.includes("狀態")) {
-                const text = $(item).find("p").text().trim();
+                const text = $(item).find(".comicParticulars-right-txt").text().trim();
                 status =
                     text === "連載中"
                         ? daisuke_1.PublicationStatus.ONGOING
@@ -287,7 +284,7 @@ class Target {
                     const text = $(tag).text().trim().replace("#", "");
                     const alias = $(tag).attr("href")?.replace("/comics?theme=", "") ?? text;
                     if (text) {
-                        genres.push({ id: alias, title: text });
+                        themes.push({ id: alias, title: text });
                     }
                 }
             }
@@ -305,9 +302,9 @@ class Target {
             webUrl: url,
             properties: [
                 {
-                    id: "genres",
+                    id: "theme",
                     title: "題材",
-                    tags: genres,
+                    tags: themes,
                 },
             ],
         };
