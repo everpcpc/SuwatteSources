@@ -280,7 +280,7 @@ class Target {
             }
             else if (label.includes("題材")) {
                 const tags = $(item).find("span a");
-                categories.push(...tags.map((tag) => tag.text().trim()));
+                categories.push(...tags.map((_, el) => $(el).text().trim()));
             }
         }
         const summary = $(".intro").text().trim();
