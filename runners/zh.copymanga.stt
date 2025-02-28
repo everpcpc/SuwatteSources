@@ -160,6 +160,7 @@ class Target {
         const baseUrl = await (0, utils_1.getBaseUrl)();
         const client = await (0, utils_1.getClient)();
         const url = await (0, utils_1.generateMangaDetailsUrl)(contentId);
+        console.log(`GET: ${url}`);
         const response = await client.get(url);
         const data = JSON.parse(response.data);
         if (data.code !== 200) {
@@ -227,6 +228,7 @@ class Target {
     async getChapters(contentId) {
         const url = await (0, utils_1.generateChapterListUrl)(contentId);
         const client = await (0, utils_1.getClient)();
+        console.log(`GET: ${url}`);
         const response = await client.get(url);
         const resultsMatch = response.data.match(/"results":"([^"]+)"/);
         if (!resultsMatch || !resultsMatch[1]) {
@@ -247,6 +249,7 @@ class Target {
     async getChapterData(contentId, chapterId) {
         const url = await (0, utils_1.generatePageListUrl)(contentId, chapterId);
         const client = await (0, utils_1.getClient)();
+        console.log(`GET: ${url}`);
         const response = await client.get(url);
         const data = JSON.parse(response.data);
         if (!data.results || !data.results.chapter) {
@@ -283,6 +286,7 @@ class Target {
     async search(query, page) {
         const url = await (0, utils_1.generateSearchUrl)(query, page);
         const client = await (0, utils_1.getClient)();
+        console.log(`GET: ${url}`);
         const response = await client.get(url);
         const data = JSON.parse(response.data);
         if (!data.results || !data.results.list) {
@@ -302,6 +306,7 @@ class Target {
         const page = Math.floor(offset / limit) + 1;
         const url = await (0, utils_1.generateExploreUrl)(theme, top, ordering, page);
         const client = await (0, utils_1.getClient)();
+        console.log(`GET: ${url}`);
         const response = await client.get(url);
         const data = JSON.parse(response.data);
         if (!data.results || !data.results.list) {
@@ -396,6 +401,7 @@ class Target {
                 return this.getDirectory({ page });
         }
         const client = await (0, utils_1.getClient)();
+        console.log(`GET: ${url}`);
         const response = await client.get(url);
         const data = JSON.parse(response.data);
         if (!data.results || !data.results.list) {
