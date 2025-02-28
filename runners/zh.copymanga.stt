@@ -206,30 +206,37 @@ class Target {
         const url = (0, utils_1.generateMangaDetailsUrl)(contentId);
         const response = await this.client.get(url);
         const data = JSON.parse(response.data);
+        if (data.code !== 200) {
+            throw new Error(`Failed to fetch manga details: ${data.message}`);
+        }
         if (!data.results) {
-            throw new Error("Failed to fetch manga details");
+            throw new Error(`Empty manga details: ${data.message}`);
         }
-        const manga = data.results;
-        const cover = manga.cover ? manga.cover.replace(".328x422.jpg", "") : "";
-        const title = manga.name || "";
-        const additionalTitles = manga.alias
-            ? manga.alias.split(",").map((alias) => alias.trim())
-            : [];
-        const creators = manga.author
-            ? manga.author.map((author) => author.name)
-            : [];
-        const summary = manga.brief || "";
-        const status = (0, utils_1.convertStatus)(manga.status);
+        const results = data.results;
         const info = [];
-        if (manga.popular) {
-            info.push(`🔥熱度: ${manga.popular}`);
+        const comic = results.comic;
+        const cover = comic.cover ? comic.cover.replace(".328x422.jpg", "") : "";
+        const title = comic.name || "";
+        const additionalTitles = comic.alias
+            ? comic.alias.split(",").map((alias) => alias.trim())
+            : [];
+        const creators = comic.author
+            ? comic.author.map((author) => author.name)
+            : [];
+        const summary = comic.brief || "";
+        const status = (0, utils_1.convertStatus)(comic.status.value);
+        if (comic.popular) {
+            info.push(`🔥熱度: ${comic.popular}`);
         }
-        if (manga.datetime_updated) {
-            info.push(`🗓最後更新: ${manga.datetime_updated}`);
+        if (comic.datetime_updated) {
+            info.push(`🗓最後更新: ${comic.datetime_updated}`);
         }
+        const region = (0, utils_1.convertRegion)(comic.region.value);
+        info.push((0, utils_1.regionToDisplay)(region));
+        const recommendedPanelMode = (0, utils_1.readingModeByRegion)(region);
         const themes = [];
-        if (manga.theme) {
-            manga.theme.forEach((theme) => {
+        if (comic.theme) {
+            comic.theme.forEach((theme) => {
                 if (theme.name) {
                     themes.push({
                         id: theme.path_word || theme.name,
@@ -238,16 +245,18 @@ class Target {
                 }
             });
         }
+        const isNSFW = comic.restrict.value === 0 ? false : true;
         return {
             title,
             additionalTitles,
-            recommendedPanelMode: daisuke_1.ReadingMode.PAGED_MANGA,
+            recommendedPanelMode,
             cover,
             creators,
             summary,
             status,
             info,
             webUrl: `${constants_1.BASE_URL}/comic/${contentId}`,
+            isNSFW,
             properties: [
                 {
                     id: "theme",
@@ -412,7 +421,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.hasMorePages = exports.generatePageListUrl = exports.generateChapterListUrl = exports.generateMangaDetailsUrl = exports.generateNewestUrl = exports.generateRecsUrl = exports.generateRankUrl = exports.generateSearchUrl = exports.generateExploreUrl = exports.createNetworkRequest = exports.chapterGroupsToChapters = exports.getTimestampFromUuid = exports.parseChapterTitle = exports.convertStatus = exports.mangaListToPageResult = exports.mangaToHighlight = exports.parseSearchRequest = exports.decryptString = void 0;
+exports.hasMorePages = exports.generatePageListUrl = exports.generateChapterListUrl = exports.generateMangaDetailsUrl = exports.generateNewestUrl = exports.generateRecsUrl = exports.generateRankUrl = exports.generateSearchUrl = exports.generateExploreUrl = exports.createNetworkRequest = exports.chapterGroupsToChapters = exports.getTimestampFromUuid = exports.parseChapterTitle = exports.readingModeByRegion = exports.regionToDisplay = exports.convertRegion = exports.convertStatus = exports.mangaListToPageResult = exports.mangaToHighlight = exports.parseSearchRequest = exports.decryptString = void 0;
 const daisuke_1 = require("@suwatte/daisuke");
 const types_1 = require("./types");
 const constants_1 = require("./constants");
@@ -500,6 +509,45 @@ const convertStatus = (statusCode) => {
     }
 };
 exports.convertStatus = convertStatus;
+const convertRegion = (region) => {
+    switch (region) {
+        case types_1.Region.Japan:
+            return types_1.Region.Japan;
+        case types_1.Region.Korea:
+            return types_1.Region.Korea;
+        case types_1.Region.West:
+            return types_1.Region.West;
+        default:
+            return types_1.Region.Japan;
+    }
+};
+exports.convertRegion = convertRegion;
+const regionToDisplay = (region) => {
+    switch (region) {
+        case types_1.Region.Japan:
+            return "日漫";
+        case types_1.Region.Korea:
+            return "韓漫";
+        case types_1.Region.West:
+            return "美漫";
+        default:
+            return "其它";
+    }
+};
+exports.regionToDisplay = regionToDisplay;
+const readingModeByRegion = (region) => {
+    switch (region) {
+        case types_1.Region.Japan:
+            return daisuke_1.ReadingMode.PAGED_MANGA;
+        case types_1.Region.Korea:
+            return daisuke_1.ReadingMode.WEBTOON;
+        case types_1.Region.West:
+            return daisuke_1.ReadingMode.PAGED_COMIC;
+        default:
+            return daisuke_1.ReadingMode.PAGED_MANGA;
+    }
+};
+exports.readingModeByRegion = readingModeByRegion;
 // Parse chapter title to extract volume and chapter numbers
 const parseChapterTitle = (title) => {
     if (title === "全一卷") {
