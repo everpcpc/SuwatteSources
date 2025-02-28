@@ -405,7 +405,10 @@ class Target {
         if (!data.results || !data.results.list) {
             return { results: [], isLastPage: true };
         }
-        const mangaList = data.results.list;
+        const mangaList = data.results.list.map((manga) => ({
+            ...manga.comic,
+            status: 1,
+        }));
         const hasMore = (0, utils_1.hasMorePages)(data.results);
         return (0, utils_1.mangaListToPageResult)(mangaList, hasMore);
     }
