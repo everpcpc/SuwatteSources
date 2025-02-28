@@ -233,6 +233,7 @@ class Target {
         }
         const region = (0, utils_1.convertRegion)(comic.region.value);
         info.push((0, utils_1.regionToDisplay)(region));
+        info.push(comic.reclass.display);
         const recommendedPanelMode = (0, utils_1.readingModeByRegion)(region);
         const themes = [];
         if (comic.theme) {
