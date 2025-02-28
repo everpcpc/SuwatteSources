@@ -427,8 +427,8 @@ class Target {
                             title: "Domain",
                             value: (await store_1.ConfigStore.domain()) || constants_1.DOMAINS.China,
                             options: [
-                                { id: constants_1.DOMAINS.China, title: "China" },
-                                { id: constants_1.DOMAINS.Global, title: "Global" },
+                                { id: constants_1.DOMAINS.China, title: `China(${constants_1.DOMAINS.China})` },
+                                { id: constants_1.DOMAINS.Global, title: `Global(${constants_1.DOMAINS.Global})` },
                             ],
                             async didChange(value) {
                                 await ObjectStore.set("domain", value);
