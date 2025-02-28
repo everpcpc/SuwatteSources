@@ -496,12 +496,12 @@ const crypto_js_1 = __importDefault(require("crypto-js"));
 const store_1 = require("./store");
 const getBaseUrl = async () => {
     const domain = await store_1.ConfigStore.domain();
-    return `https://www.${domain}`;
+    return `https://www.${domain || constants_1.DOMAINS.China}`;
 };
 exports.getBaseUrl = getBaseUrl;
 const getApiUrl = async () => {
     const domain = await store_1.ConfigStore.domain();
-    return `https://api.${domain}/api/v3`;
+    return `https://api.${domain || constants_1.DOMAINS.China}/api/v3`;
 };
 exports.getApiUrl = getApiUrl;
 const getRequestHeaders = async () => {
