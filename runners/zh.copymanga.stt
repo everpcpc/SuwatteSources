@@ -632,44 +632,32 @@ const parseChapterTitle = (title) => {
 };
 exports.parseChapterTitle = parseChapterTitle;
 // Get timestamp from UUID
-// 43acc6f8-5d5d-11ee-9412-d3d228a76de6
+// example: 43acc6f8-5d5d-11ee-9412-d3d228a76de6
 const getTimestampFromUuid = (uuid) => {
-    try {
-        // 验证UUID格式
-        if (!uuid.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i)) {
-            throw new Error("Invalid UUID format");
-        }
-        // 检查是否是版本1的UUID
-        const version = uuid.charAt(14);
-        if (version !== "1") {
-            throw new Error("Not a version 1 UUID");
-        }
-        // 从UUID v1中提取时间戳部分
-        // 时间低位（time_low）
-        const timeLow = parseInt(uuid.substring(0, 8), 16);
-        // 时间中位（time_mid）
-        const timeMid = parseInt(uuid.substring(9, 13), 16);
-        // 时间高位和版本（time_hi_and_version）- 需要去掉版本信息
-        const timeHiAndVersion = parseInt(uuid.substring(15, 18), 16);
-        // 组合时间戳（以100纳秒为单位）
-        // 格式：time_low + time_mid * 2^32 + (time_hi_and_version & 0x0FFF) * 2^48
-        const timestamp = timeLow + timeMid * Math.pow(2, 32) + timeHiAndVersion * Math.pow(2, 48);
-        // UUID v1的时间戳是自1582-10-15 00:00:00以来的100纳秒间隔数
-        // 转换为Unix时间戳（毫秒）
-        const gregorianEpochInUnixTime = -12219292800000; // 1582-10-15 00:00:00 UTC in Unix time
-        const unixTimestamp = gregorianEpochInUnixTime + timestamp / 10000;
-        return unixTimestamp;
+    // UUID v1 format: time_low-time_mid-time_hi_and_version-clock_seq-node
+    // Extract the time components
+    const parts = uuid.split("-");
+    if (parts.length !== 5) {
+        throw new Error("Invalid UUID format");
     }
-    catch (error) {
-        if (error instanceof Error) {
-            console.error("Error extracting timestamp from UUID:", error.message);
-            throw new Error(error.message);
-        }
-        else {
-            console.error("Unknown error extracting timestamp from UUID");
-            throw new Error("Failed to extract timestamp from UUID");
-        }
-    }
+    // Extract time components (time_low, time_mid, time_hi_and_version)
+    const timeLow = parseInt(parts[0], 16);
+    const timeMid = parseInt(parts[1], 16);
+    const timeHiAndVersion = parseInt(parts[2], 16) & 0x0fff; // Remove version bits
+    // Combine time components into a 60-bit timestamp
+    // Convert to BigInt to handle large numbers
+    const timestamp = (BigInt(timeHiAndVersion) << 48n) |
+        (BigInt(timeMid) << 32n) |
+        BigInt(timeLow);
+    // Convert to Unix timestamp (seconds since epoch)
+    // UUID timestamp is 100-nanosecond intervals since October 15, 1582
+    // Need to convert to Unix epoch (January 1, 1970)
+    const UNIX_EPOCH_DIFF = 122192928000000000n; // Difference in 100ns intervals
+    // Calculate Unix timestamp in 100ns intervals
+    const unixTimestamp100Ns = timestamp - UNIX_EPOCH_DIFF;
+    const seconds = Number(unixTimestamp100Ns / 10000000n);
+    const fraction = Number(unixTimestamp100Ns % 10000000n) / 10000000;
+    return seconds + fraction;
 };
 exports.getTimestampFromUuid = getTimestampFromUuid;
 // Convert chapter groups to chapters array
