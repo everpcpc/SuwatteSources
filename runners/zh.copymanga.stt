@@ -416,6 +416,7 @@ class Target {
     }
     // Handle image requests
     async willRequestImage(url) {
+        console.log(`GET Image: ${url}`);
         const headers = await (0, utils_1.getRequestHeaders)();
         return {
             url,
