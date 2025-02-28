@@ -1,7 +1,7 @@
 (function(f){if(typeof exports==="object"&&typeof module!=="undefined"){module.exports=f()}else if(typeof define==="function"&&define.amd){define([],f)}else{var g;if(typeof window!=="undefined"){g=window}else if(typeof global!=="undefined"){g=global}else if(typeof self!=="undefined"){g=self}else{g=this}g.STTPackage = f()}})(function(){var define,module,exports;return (function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c="function"==typeof require&&require;if(!f&&c)return c(i,!0);if(u)return u(i,!0);var a=new Error("Cannot find module '"+i+"'");throw a.code="MODULE_NOT_FOUND",a}var p=n[i]={exports:{}};e[i][0].call(p.exports,function(r){var n=e[i][1][r];return o(n||r)},p,p.exports,r,e,n,t)}return n[i].exports}for(var u="function"==typeof require&&require,i=0;i<t.length;i++)o(t[i]);return o}return r})()({1:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.DOMAINS = exports.LISTING_TYPES = exports.BASE_URL = exports.LIMIT = exports.DECRYPT_KEY = exports.EXPLORE_COLLECTIONS = exports.getProperties = exports.THEME_OPTIONS = exports.REGION_OPTIONS = exports.STATUS_OPTIONS = exports.SORT_OPTIONS = void 0;
+exports.DOMAINS = exports.LISTING_TYPES = exports.LIMIT = exports.DECRYPT_KEY = exports.EXPLORE_COLLECTIONS = exports.getProperties = exports.THEME_OPTIONS = exports.REGION_OPTIONS = exports.STATUS_OPTIONS = exports.SORT_OPTIONS = void 0;
 const daisuke_1 = require("@suwatte/daisuke");
 exports.SORT_OPTIONS = [
     { title: "更新時間", id: "datetime_updated" },
@@ -121,8 +121,6 @@ exports.EXPLORE_COLLECTIONS = [
 exports.DECRYPT_KEY = "xxxmanga.woo.key";
 // Default limit for manga per page
 exports.LIMIT = 30;
-// Base URLs
-exports.BASE_URL = "https://www.copymanga.tv";
 // Listing types
 exports.LISTING_TYPES = {
     DAY_RANK: "day",
@@ -149,7 +147,7 @@ exports.info = {
     id: "zh.copymanga",
     name: "拷贝漫画",
     version: 1.1,
-    website: constants_1.BASE_URL,
+    website: "https://www.copymanga.tv",
     supportedLanguages: ["zh"],
     thumbnail: "copymanga.png",
     minSupportedAppVersion: "5.0",
