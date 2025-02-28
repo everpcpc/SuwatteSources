@@ -157,83 +157,12 @@ exports.info = {
 };
 class Target {
     info = exports.info;
-    client = new daisuke_1.NetworkClientBuilder()
-        .addHeader("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36")
-        .addHeader("Referer", constants_1.BASE_URL)
-        .addHeader("version", "2.3.6")
-        .addHeader("platform", "3")
-        .addHeader("region", "1")
-        .addHeader("webp", "1")
-        .build();
-    async getPreferenceMenu() {
-        return {
-            sections: [
-                {
-                    header: "Core",
-                    children: [
-                        (0, daisuke_1.UIPicker)({
-                            id: "domain",
-                            title: "Domain",
-                            value: (await store_1.ConfigStore.domain()) || constants_1.DOMAINS.China,
-                            options: [
-                                { id: constants_1.DOMAINS.China, title: "China" },
-                                { id: constants_1.DOMAINS.Global, title: "Global" },
-                            ],
-                            async didChange(value) {
-                                await ObjectStore.set("domain", value);
-                            },
-                        }),
-                    ],
-                },
-            ],
-        };
-    }
-    // Get manga list based on filters and page
-    async getDirectory(request) {
-        const params = (0, utils_1.parseSearchRequest)(request);
-        if (request.listId) {
-            return this.getListing({ id: request.listId }, request.page || 1);
-        }
-        if (params.q) {
-            return this.search(params.q, request.page || 1);
-        }
-        return this.browse(params);
-    }
-    // Search for manga
-    async search(query, page) {
-        const url = await (0, utils_1.generateSearchUrl)(query, page);
-        const response = await this.client.get(url);
-        const data = JSON.parse(response.data);
-        if (!data.results || !data.results.list) {
-            return { results: [], isLastPage: true };
-        }
-        const mangaList = data.results.list;
-        const hasMore = (0, utils_1.hasMorePages)(data.results);
-        return (0, utils_1.mangaListToPageResult)(mangaList, hasMore);
-    }
-    // Browse manga with filters
-    async browse(params) {
-        const theme = params.theme || "";
-        const top = params.region || "";
-        const ordering = params.ordering || "-datetime_updated";
-        const offset = params.offset || 0;
-        const limit = params.limit || 50;
-        const page = Math.floor(offset / limit) + 1;
-        const url = await (0, utils_1.generateExploreUrl)(theme, top, ordering, page);
-        const response = await this.client.get(url);
-        const data = JSON.parse(response.data);
-        if (!data.results || !data.results.list) {
-            return { results: [], isLastPage: true };
-        }
-        const mangaList = data.results.list;
-        const hasMore = (0, utils_1.hasMorePages)(data.results);
-        return (0, utils_1.mangaListToPageResult)(mangaList, hasMore);
-    }
     // Get manga details
     async getContent(contentId) {
         const baseUrl = await (0, utils_1.getBaseUrl)();
+        const client = await (0, utils_1.getClient)();
         const url = await (0, utils_1.generateMangaDetailsUrl)(contentId);
-        const response = await this.client.get(url);
+        const response = await client.get(url);
         const data = JSON.parse(response.data);
         if (data.code !== 200) {
             throw new Error(`Failed to fetch manga details: ${data.message}`);
@@ -299,7 +228,8 @@ class Target {
     // Get chapter list for a manga
     async getChapters(contentId) {
         const url = await (0, utils_1.generateChapterListUrl)(contentId);
-        const response = await this.client.get(url);
+        const client = await (0, utils_1.getClient)();
+        const response = await client.get(url);
         const resultsMatch = response.data.match(/"results":"([^"]+)"/);
         if (!resultsMatch || !resultsMatch[1]) {
             return [];
@@ -318,7 +248,8 @@ class Target {
     // Get page list for a chapter
     async getChapterData(contentId, chapterId) {
         const url = await (0, utils_1.generatePageListUrl)(contentId, chapterId);
-        const response = await this.client.get(url);
+        const client = await (0, utils_1.getClient)();
+        const response = await client.get(url);
         const data = JSON.parse(response.data);
         if (!data.results || !data.results.chapter) {
             return { pages: [] };
@@ -334,6 +265,53 @@ class Target {
             url: page.url,
         }));
         return { pages };
+    }
+    // Get tags
+    async getTags() {
+        return (0, constants_1.getProperties)();
+    }
+    // Get manga list based on filters and page
+    async getDirectory(request) {
+        const params = (0, utils_1.parseSearchRequest)(request);
+        if (request.listId) {
+            return this.getListing({ id: request.listId }, request.page || 1);
+        }
+        if (params.q) {
+            return this.search(params.q, request.page || 1);
+        }
+        return this.browse(params);
+    }
+    // Search for manga
+    async search(query, page) {
+        const url = await (0, utils_1.generateSearchUrl)(query, page);
+        const client = await (0, utils_1.getClient)();
+        const response = await client.get(url);
+        const data = JSON.parse(response.data);
+        if (!data.results || !data.results.list) {
+            return { results: [], isLastPage: true };
+        }
+        const mangaList = data.results.list;
+        const hasMore = (0, utils_1.hasMorePages)(data.results);
+        return (0, utils_1.mangaListToPageResult)(mangaList, hasMore);
+    }
+    // Browse manga with filters
+    async browse(params) {
+        const theme = params.theme || "";
+        const top = params.region || "";
+        const ordering = params.ordering || "-datetime_updated";
+        const offset = params.offset || 0;
+        const limit = params.limit || 50;
+        const page = Math.floor(offset / limit) + 1;
+        const url = await (0, utils_1.generateExploreUrl)(theme, top, ordering, page);
+        const client = await (0, utils_1.getClient)();
+        const response = await client.get(url);
+        const data = JSON.parse(response.data);
+        if (!data.results || !data.results.list) {
+            return { results: [], isLastPage: true };
+        }
+        const mangaList = data.results.list;
+        const hasMore = (0, utils_1.hasMorePages)(data.results);
+        return (0, utils_1.mangaListToPageResult)(mangaList, hasMore);
     }
     // Get directory config
     async getDirectoryConfig() {
@@ -419,7 +397,8 @@ class Target {
             default:
                 return this.getDirectory({ page });
         }
-        const response = await this.client.get(url);
+        const client = await (0, utils_1.getClient)();
+        const response = await client.get(url);
         const data = JSON.parse(response.data);
         if (!data.results || !data.results.list) {
             return { results: [], isLastPage: true };
@@ -430,10 +409,6 @@ class Target {
         }));
         const hasMore = (0, utils_1.hasMorePages)(data.results);
         return (0, utils_1.mangaListToPageResult)(mangaList, hasMore);
-    }
-    // Get tags
-    async getTags() {
-        return (0, constants_1.getProperties)();
     }
     // Handle image requests
     async willRequestImage(url) {
@@ -448,6 +423,29 @@ class Target {
                 region: "1",
                 webp: "1",
             },
+        };
+    }
+    async getPreferenceMenu() {
+        return {
+            sections: [
+                {
+                    header: "Core",
+                    children: [
+                        (0, daisuke_1.UIPicker)({
+                            id: "domain",
+                            title: "Domain",
+                            value: (await store_1.ConfigStore.domain()) || constants_1.DOMAINS.China,
+                            options: [
+                                { id: constants_1.DOMAINS.China, title: "China" },
+                                { id: constants_1.DOMAINS.Global, title: "Global" },
+                            ],
+                            async didChange(value) {
+                                await ObjectStore.set("domain", value);
+                            },
+                        }),
+                    ],
+                },
+            ],
         };
     }
 }
@@ -493,7 +491,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.hasMorePages = exports.generatePageListUrl = exports.generateChapterListUrl = exports.generateMangaDetailsUrl = exports.generateNewestUrl = exports.generateRecsUrl = exports.generateRankUrl = exports.generateSearchUrl = exports.generateExploreUrl = exports.chapterGroupsToChapters = exports.getTimestampFromUuid = exports.parseChapterTitle = exports.readingModeByRegion = exports.regionToDisplay = exports.convertRegion = exports.convertStatus = exports.mangaListToPageResult = exports.mangaToHighlight = exports.parseSearchRequest = exports.decryptString = exports.getApiUrl = exports.getBaseUrl = void 0;
+exports.hasMorePages = exports.generatePageListUrl = exports.generateChapterListUrl = exports.generateMangaDetailsUrl = exports.generateNewestUrl = exports.generateRecsUrl = exports.generateRankUrl = exports.generateSearchUrl = exports.generateExploreUrl = exports.chapterGroupsToChapters = exports.getTimestampFromUuid = exports.parseChapterTitle = exports.readingModeByRegion = exports.regionToDisplay = exports.convertRegion = exports.convertStatus = exports.mangaListToPageResult = exports.mangaToHighlight = exports.parseSearchRequest = exports.decryptString = exports.getClient = exports.getRequestHeaders = exports.getApiUrl = exports.getBaseUrl = void 0;
 const daisuke_1 = require("@suwatte/daisuke");
 const types_1 = require("./types");
 const constants_1 = require("./constants");
@@ -509,6 +507,31 @@ const getApiUrl = async () => {
     return `https://api.${domain}/api/v3`;
 };
 exports.getApiUrl = getApiUrl;
+const getRequestHeaders = async () => {
+    const baseUrl = await (0, exports.getBaseUrl)();
+    return {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
+        Referer: baseUrl,
+        version: "2.3.6",
+        platform: "3",
+        region: "1",
+        webp: "1",
+    };
+};
+exports.getRequestHeaders = getRequestHeaders;
+const getClient = async () => {
+    const baseUrl = await (0, exports.getBaseUrl)();
+    const client = new daisuke_1.NetworkClientBuilder()
+        .addHeader("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36")
+        .addHeader("Referer", baseUrl)
+        .addHeader("version", "2.3.6")
+        .addHeader("platform", "3")
+        .addHeader("region", "1")
+        .addHeader("webp", "1")
+        .build();
+    return client;
+};
+exports.getClient = getClient;
 const decryptString = (encryptedString) => {
     try {
         const iv = encryptedString.substring(0, 16);
