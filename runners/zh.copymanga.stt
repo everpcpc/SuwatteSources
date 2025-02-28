@@ -154,14 +154,15 @@ exports.info = {
     rating: daisuke_1.CatalogRating.MIXED,
 };
 class Target {
+    client = new NetworkClient();
     info = exports.info;
     // Get manga details
     async getContent(contentId) {
         const baseUrl = await (0, utils_1.getBaseUrl)();
-        const client = await (0, utils_1.getClient)();
         const url = await (0, utils_1.generateMangaDetailsUrl)(contentId);
         console.log(`GET: ${url}`);
-        const response = await client.get(url);
+        const headers = await (0, utils_1.getRequestHeaders)();
+        const response = await this.client.get(url, { headers });
         const data = JSON.parse(response.data);
         if (data.code !== 200) {
             throw new Error(`Failed to fetch manga details: ${data.message}`);
@@ -227,9 +228,9 @@ class Target {
     // Get chapter list for a manga
     async getChapters(contentId) {
         const url = await (0, utils_1.generateChapterListUrl)(contentId);
-        const client = await (0, utils_1.getClient)();
         console.log(`GET: ${url}`);
-        const response = await client.get(url);
+        const headers = await (0, utils_1.getRequestHeaders)();
+        const response = await this.client.get(url, { headers });
         const resultsMatch = response.data.match(/"results":"([^"]+)"/);
         if (!resultsMatch || !resultsMatch[1]) {
             return [];
@@ -248,9 +249,9 @@ class Target {
     // Get page list for a chapter
     async getChapterData(contentId, chapterId) {
         const url = await (0, utils_1.generatePageListUrl)(contentId, chapterId);
-        const client = await (0, utils_1.getClient)();
+        const headers = await (0, utils_1.getRequestHeaders)();
         console.log(`GET: ${url}`);
-        const response = await client.get(url);
+        const response = await this.client.get(url, { headers });
         const data = JSON.parse(response.data);
         if (!data.results || !data.results.chapter) {
             return { pages: [] };
@@ -285,9 +286,9 @@ class Target {
     // Search for manga
     async search(query, page) {
         const url = await (0, utils_1.generateSearchUrl)(query, page);
-        const client = await (0, utils_1.getClient)();
+        const headers = await (0, utils_1.getRequestHeaders)();
         console.log(`GET: ${url}`);
-        const response = await client.get(url);
+        const response = await this.client.get(url, { headers });
         const data = JSON.parse(response.data);
         if (!data.results || !data.results.list) {
             return { results: [], isLastPage: true };
@@ -305,9 +306,9 @@ class Target {
         const limit = params.limit || 50;
         const page = Math.floor(offset / limit) + 1;
         const url = await (0, utils_1.generateExploreUrl)(theme, top, ordering, page);
-        const client = await (0, utils_1.getClient)();
+        const headers = await (0, utils_1.getRequestHeaders)();
         console.log(`GET: ${url}`);
-        const response = await client.get(url);
+        const response = await this.client.get(url, { headers });
         const data = JSON.parse(response.data);
         if (!data.results || !data.results.list) {
             return { results: [], isLastPage: true };
@@ -400,9 +401,9 @@ class Target {
             default:
                 return this.getDirectory({ page });
         }
-        const client = await (0, utils_1.getClient)();
+        const headers = await (0, utils_1.getRequestHeaders)();
         console.log(`GET: ${url}`);
-        const response = await client.get(url);
+        const response = await this.client.get(url, { headers });
         const data = JSON.parse(response.data);
         if (!data.results || !data.results.list) {
             return { results: [], isLastPage: true };
@@ -488,7 +489,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.hasMorePages = exports.generatePageListUrl = exports.generateChapterListUrl = exports.generateMangaDetailsUrl = exports.generateNewestUrl = exports.generateRecsUrl = exports.generateRankUrl = exports.generateSearchUrl = exports.generateExploreUrl = exports.chapterGroupsToChapters = exports.getTimestampFromUuid = exports.parseChapterTitle = exports.readingModeByRegion = exports.regionToDisplay = exports.convertRegion = exports.convertStatus = exports.mangaListToPageResult = exports.mangaToHighlight = exports.parseSearchRequest = exports.decryptString = exports.getClient = exports.getRequestHeaders = exports.getApiUrl = exports.getBaseUrl = void 0;
+exports.hasMorePages = exports.generatePageListUrl = exports.generateChapterListUrl = exports.generateMangaDetailsUrl = exports.generateNewestUrl = exports.generateRecsUrl = exports.generateRankUrl = exports.generateSearchUrl = exports.generateExploreUrl = exports.chapterGroupsToChapters = exports.getTimestampFromUuid = exports.parseChapterTitle = exports.readingModeByRegion = exports.regionToDisplay = exports.convertRegion = exports.convertStatus = exports.mangaListToPageResult = exports.mangaToHighlight = exports.parseSearchRequest = exports.decryptString = exports.getRequestHeaders = exports.getApiUrl = exports.getBaseUrl = void 0;
 const daisuke_1 = require("@suwatte/daisuke");
 const types_1 = require("./types");
 const constants_1 = require("./constants");
@@ -516,19 +517,6 @@ const getRequestHeaders = async () => {
     };
 };
 exports.getRequestHeaders = getRequestHeaders;
-const getClient = async () => {
-    const baseUrl = await (0, exports.getBaseUrl)();
-    const client = new daisuke_1.NetworkClientBuilder()
-        .addHeader("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36")
-        .addHeader("Referer", baseUrl)
-        .addHeader("version", "2.3.6")
-        .addHeader("platform", "3")
-        .addHeader("region", "1")
-        .addHeader("webp", "1")
-        .build();
-    return client;
-};
-exports.getClient = getClient;
 const decryptString = (encryptedString) => {
     try {
         const iv = encryptedString.substring(0, 16);
