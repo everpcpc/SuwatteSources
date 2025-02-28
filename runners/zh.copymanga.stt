@@ -1,7 +1,7 @@
 (function(f){if(typeof exports==="object"&&typeof module!=="undefined"){module.exports=f()}else if(typeof define==="function"&&define.amd){define([],f)}else{var g;if(typeof window!=="undefined"){g=window}else if(typeof global!=="undefined"){g=global}else if(typeof self!=="undefined"){g=self}else{g=this}g.STTPackage = f()}})(function(){var define,module,exports;return (function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c="function"==typeof require&&require;if(!f&&c)return c(i,!0);if(u)return u(i,!0);var a=new Error("Cannot find module '"+i+"'");throw a.code="MODULE_NOT_FOUND",a}var p=n[i]={exports:{}};e[i][0].call(p.exports,function(r){var n=e[i][1][r];return o(n||r)},p,p.exports,r,e,n,t)}return n[i].exports}for(var u="function"==typeof require&&require,i=0;i<t.length;i++)o(t[i]);return o}return r})()({1:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.DOMAINS = exports.LISTING_TYPES = exports.API_HEADERS = exports.BASE_URL = exports.LIMIT = exports.DECRYPT_KEY = exports.EXPLORE_COLLECTIONS = exports.getProperties = exports.THEME_OPTIONS = exports.REGION_OPTIONS = exports.STATUS_OPTIONS = exports.SORT_OPTIONS = void 0;
+exports.DOMAINS = exports.LISTING_TYPES = exports.BASE_URL = exports.LIMIT = exports.DECRYPT_KEY = exports.EXPLORE_COLLECTIONS = exports.getProperties = exports.THEME_OPTIONS = exports.REGION_OPTIONS = exports.STATUS_OPTIONS = exports.SORT_OPTIONS = void 0;
 const daisuke_1 = require("@suwatte/daisuke");
 exports.SORT_OPTIONS = [
     { title: "更新時間", id: "datetime_updated" },
@@ -123,15 +123,6 @@ exports.DECRYPT_KEY = "xxxmanga.woo.key";
 exports.LIMIT = 30;
 // Base URLs
 exports.BASE_URL = "https://www.copymanga.tv";
-// API Headers
-exports.API_HEADERS = {
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
-    Referer: exports.BASE_URL,
-    version: "2.3.6",
-    platform: "3",
-    region: "1",
-    webp: "1",
-};
 // Listing types
 exports.LISTING_TYPES = {
     DAY_RANK: "day",
@@ -446,7 +437,18 @@ class Target {
     }
     // Handle image requests
     async willRequestImage(url) {
-        return (0, utils_1.createNetworkRequest)(url);
+        const baseUrl = await (0, utils_1.getBaseUrl)();
+        return {
+            url,
+            headers: {
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
+                Referer: baseUrl,
+                version: "2.3.6",
+                platform: "3",
+                region: "1",
+                webp: "1",
+            },
+        };
     }
 }
 exports.Target = Target;
@@ -491,7 +493,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.hasMorePages = exports.generatePageListUrl = exports.generateChapterListUrl = exports.generateMangaDetailsUrl = exports.generateNewestUrl = exports.generateRecsUrl = exports.generateRankUrl = exports.generateSearchUrl = exports.generateExploreUrl = exports.createNetworkRequest = exports.chapterGroupsToChapters = exports.getTimestampFromUuid = exports.parseChapterTitle = exports.readingModeByRegion = exports.regionToDisplay = exports.convertRegion = exports.convertStatus = exports.mangaListToPageResult = exports.mangaToHighlight = exports.parseSearchRequest = exports.decryptString = exports.getApiUrl = exports.getBaseUrl = void 0;
+exports.hasMorePages = exports.generatePageListUrl = exports.generateChapterListUrl = exports.generateMangaDetailsUrl = exports.generateNewestUrl = exports.generateRecsUrl = exports.generateRankUrl = exports.generateSearchUrl = exports.generateExploreUrl = exports.chapterGroupsToChapters = exports.getTimestampFromUuid = exports.parseChapterTitle = exports.readingModeByRegion = exports.regionToDisplay = exports.convertRegion = exports.convertStatus = exports.mangaListToPageResult = exports.mangaToHighlight = exports.parseSearchRequest = exports.decryptString = exports.getApiUrl = exports.getBaseUrl = void 0;
 const daisuke_1 = require("@suwatte/daisuke");
 const types_1 = require("./types");
 const constants_1 = require("./constants");
@@ -785,14 +787,6 @@ const chapterGroupsToChapters = async (groups, mangaId) => {
     });
 };
 exports.chapterGroupsToChapters = chapterGroupsToChapters;
-// Create network request with appropriate headers
-const createNetworkRequest = (url) => {
-    return {
-        url,
-        headers: constants_1.API_HEADERS,
-    };
-};
-exports.createNetworkRequest = createNetworkRequest;
 // API URL generators
 const generateExploreUrl = async (theme, top, ordering, page) => {
     const apiUrl = await (0, exports.getApiUrl)();
