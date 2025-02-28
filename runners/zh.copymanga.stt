@@ -410,17 +410,10 @@ class Target {
     }
     // Handle image requests
     async willRequestImage(url) {
-        const baseUrl = await (0, utils_1.getBaseUrl)();
+        const headers = await (0, utils_1.getRequestHeaders)();
         return {
             url,
-            headers: {
-                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
-                Referer: baseUrl,
-                version: "2.3.6",
-                platform: "3",
-                region: "1",
-                webp: "1",
-            },
+            headers,
         };
     }
     async getPreferenceMenu() {
