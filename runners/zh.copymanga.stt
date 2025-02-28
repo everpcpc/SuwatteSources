@@ -173,6 +173,9 @@ class Target {
     // Get manga list based on filters and page
     async getDirectory(request) {
         const params = (0, utils_1.parseSearchRequest)(request);
+        if (request.listId) {
+            return this.getListing({ id: request.listId }, request.page || 1);
+        }
         if (params.q) {
             return this.search(params.q, request.page || 1);
         }
@@ -342,7 +345,34 @@ class Target {
                     id: "datetime_updated",
                     ascending: false,
                 },
+                canChangeOrder: true,
             },
+            lists: [
+                {
+                    id: constants_1.LISTING_TYPES.DAY_RANK,
+                    title: "日榜",
+                },
+                {
+                    id: constants_1.LISTING_TYPES.WEEK_RANK,
+                    title: "周榜",
+                },
+                {
+                    id: constants_1.LISTING_TYPES.MONTH_RANK,
+                    title: "月榜",
+                },
+                {
+                    id: constants_1.LISTING_TYPES.TOTAL_RANK,
+                    title: "總榜",
+                },
+                {
+                    id: constants_1.LISTING_TYPES.RECS,
+                    title: "推薦",
+                },
+                {
+                    id: constants_1.LISTING_TYPES.NEWEST,
+                    title: "最新",
+                },
+            ],
         };
     }
     // Get listing for a specific category
