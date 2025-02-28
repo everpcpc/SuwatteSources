@@ -386,7 +386,7 @@ exports.Target = Target;
 },{"./constants":1,"./utils":4,"@suwatte/daisuke":5}],3:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.Sort = exports.Region = exports.Status = exports.SearchType = void 0;
+exports.Region = exports.Status = exports.SearchType = void 0;
 var SearchType;
 (function (SearchType) {
     SearchType["All"] = "";
@@ -408,13 +408,6 @@ var Region;
     Region[Region["Korea"] = 1] = "Korea";
     Region[Region["West"] = 2] = "West";
 })(Region = exports.Region || (exports.Region = {}));
-var Sort;
-(function (Sort) {
-    Sort["DateUpdatedAsc"] = "datetime_updated";
-    Sort["DateUpdatedDesc"] = "-datetime_updated";
-    Sort["PopularityAsc"] = "popular";
-    Sort["PopularityDesc"] = "-popular";
-})(Sort = exports.Sort || (exports.Sort = {}));
 
 },{}],4:[function(require,module,exports){
 "use strict";
