@@ -416,7 +416,6 @@ class Target {
     }
     // Handle image requests
     async willRequestImage(url) {
-        console.log(`GET Image: ${url}`);
         const headers = await (0, utils_1.getRequestHeaders)();
         return {
             url,
@@ -845,8 +844,8 @@ const generateChapterListUrl = async (id) => {
 };
 exports.generateChapterListUrl = generateChapterListUrl;
 const generatePageListUrl = async (mangaId, chapterId) => {
-    const baseUrl = await (0, exports.getBaseUrl)();
-    return `${baseUrl}/comic/${mangaId}/chapter/${chapterId}`;
+    const apiUrl = await (0, exports.getApiUrl)();
+    return `${apiUrl}/comic/${mangaId}/chapter/${chapterId}`;
 };
 exports.generatePageListUrl = generatePageListUrl;
 // Check if the API response has more pages
