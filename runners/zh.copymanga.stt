@@ -120,7 +120,7 @@ exports.EXPLORE_COLLECTIONS = [
 // AES Decryption Key
 exports.DECRYPT_KEY = "xxxmanga.woo.key";
 // Default limit for manga per page
-exports.LIMIT = 50;
+exports.LIMIT = 30;
 // Base URLs
 exports.BASE_URL = "https://www.mangacopy.com";
 exports.API_URL = "https://api.mangacopy.com/api/v3";
@@ -162,7 +162,14 @@ exports.info = {
 };
 class Target {
     info = exports.info;
-    client = new NetworkClient();
+    client = new daisuke_1.NetworkClientBuilder()
+        .addHeader("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36")
+        .addHeader("Referer", constants_1.BASE_URL)
+        .addHeader("version", "2.3.6")
+        .addHeader("platform", "3")
+        .addHeader("region", "1")
+        .addHeader("webp", "1")
+        .build();
     // Get manga list based on filters and page
     async getDirectory(request) {
         const params = (0, utils_1.parseSearchRequest)(request);
@@ -723,7 +730,7 @@ const generateExploreUrl = (theme, top, ordering, page) => {
 };
 exports.generateExploreUrl = generateExploreUrl;
 const generateSearchUrl = (query, page) => {
-    return `${constants_1.API_URL}/search/comic?q=${encodeURIComponent(query)}&q_type=&limit=${constants_1.LIMIT}&offset=${(page - 1) * constants_1.LIMIT}`;
+    return `${constants_1.API_URL}/search/comic?q=${encodeURIComponent(query)}&&limit=${constants_1.LIMIT}&offset=${(page - 1) * constants_1.LIMIT}`;
 };
 exports.generateSearchUrl = generateSearchUrl;
 const generateRankUrl = (dateType, page) => {
