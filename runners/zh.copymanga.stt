@@ -1,7 +1,7 @@
 (function(f){if(typeof exports==="object"&&typeof module!=="undefined"){module.exports=f()}else if(typeof define==="function"&&define.amd){define([],f)}else{var g;if(typeof window!=="undefined"){g=window}else if(typeof global!=="undefined"){g=global}else if(typeof self!=="undefined"){g=self}else{g=this}g.STTPackage = f()}})(function(){var define,module,exports;return (function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c="function"==typeof require&&require;if(!f&&c)return c(i,!0);if(u)return u(i,!0);var a=new Error("Cannot find module '"+i+"'");throw a.code="MODULE_NOT_FOUND",a}var p=n[i]={exports:{}};e[i][0].call(p.exports,function(r){var n=e[i][1][r];return o(n||r)},p,p.exports,r,e,n,t)}return n[i].exports}for(var u="function"==typeof require&&require,i=0;i<t.length;i++)o(t[i]);return o}return r})()({1:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.BASE_URL = exports.LIMIT = exports.DECRYPT_KEY = exports.EXPLORE_COLLECTIONS = exports.getProperties = exports.THEME_OPTIONS = exports.REGION_OPTIONS = exports.STATUS_OPTIONS = exports.SORT_OPTIONS = void 0;
+exports.LISTING_TYPES = exports.API_HEADERS = exports.API_URL = exports.BASE_URL = exports.LIMIT = exports.DECRYPT_KEY = exports.EXPLORE_COLLECTIONS = exports.getProperties = exports.THEME_OPTIONS = exports.REGION_OPTIONS = exports.STATUS_OPTIONS = exports.SORT_OPTIONS = void 0;
 const daisuke_1 = require("@suwatte/daisuke");
 exports.SORT_OPTIONS = [
     { title: "更新時間", id: "datetime_updated" },
@@ -120,45 +120,40 @@ exports.EXPLORE_COLLECTIONS = [
 // AES Decryption Key
 exports.DECRYPT_KEY = "xxxmanga.woo.key";
 // Default limit for manga per page
-exports.LIMIT = 20;
-// Base URL
-exports.BASE_URL = "https://copymanga.tv";
+exports.LIMIT = 50;
+// Base URLs
+exports.BASE_URL = "https://www.mangacopy.com";
+exports.API_URL = "https://api.mangacopy.com/api/v3";
+// API Headers
+exports.API_HEADERS = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
+    Referer: exports.BASE_URL,
+    version: "2.3.6",
+    platform: "3",
+    region: "1",
+    webp: "1",
+};
+// Listing types
+exports.LISTING_TYPES = {
+    DAY_RANK: "day",
+    WEEK_RANK: "week",
+    MONTH_RANK: "month",
+    TOTAL_RANK: "total",
+    RECS: "recs",
+    NEWEST: "newest",
+};
 
 },{"@suwatte/daisuke":5}],2:[function(require,module,exports){
 "use strict";
-var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    var desc = Object.getOwnPropertyDescriptor(m, k);
-    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
-      desc = { enumerable: true, get: function() { return m[k]; } };
-    }
-    Object.defineProperty(o, k2, desc);
-}) : (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    o[k2] = m[k];
-}));
-var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
-    Object.defineProperty(o, "default", { enumerable: true, value: v });
-}) : function(o, v) {
-    o["default"] = v;
-});
-var __importStar = (this && this.__importStar) || function (mod) {
-    if (mod && mod.__esModule) return mod;
-    var result = {};
-    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
-    __setModuleDefault(result, mod);
-    return result;
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Target = exports.info = void 0;
 const daisuke_1 = require("@suwatte/daisuke");
 const constants_1 = require("./constants");
 const utils_1 = require("./utils");
-const cheerio = __importStar(require("cheerio"));
 exports.info = {
     id: "zh.copymanga",
     name: "拷贝漫画",
-    version: 1.0,
+    version: 1.1,
     website: constants_1.BASE_URL,
     supportedLanguages: ["zh"],
     thumbnail: "copymanga.png",
@@ -172,124 +167,87 @@ class Target {
     async getDirectory(request) {
         const params = (0, utils_1.parseSearchRequest)(request);
         if (params.q) {
-            return this.search(params);
+            return this.search(params.q, request.page || 1);
         }
         return this.browse(params);
     }
     // Search for manga
-    async search(params) {
-        const url = `${constants_1.BASE_URL}/api/kb/web/searchbc/comics`;
-        const response = await this.client.get(url, { params });
+    async search(query, page) {
+        const url = (0, utils_1.generateSearchUrl)(query, page);
+        const response = await this.client.get(url);
         const data = JSON.parse(response.data);
-        const results = data.results.list;
-        const total = data.results.total;
-        const offset = data.results.offset;
-        const limit = data.results.limit;
-        const hasMore = offset + limit < total;
-        return (0, utils_1.mangaListToPageResult)(results, hasMore);
+        if (!data.results || !data.results.list) {
+            return { results: [], isLastPage: true };
+        }
+        const mangaList = data.results.list;
+        const hasMore = (0, utils_1.hasMorePages)(data.results);
+        return (0, utils_1.mangaListToPageResult)(mangaList, hasMore);
     }
     // Browse manga with filters
     async browse(params) {
-        const url = `${constants_1.BASE_URL}/comics`;
-        console.log(`browse with params: ${JSON.stringify(params)}`);
-        const response = await this.client.get(url, { params });
-        const html = response.data;
-        const $ = cheerio.load(html);
-        const mangaListElement = $(".exemptComic-box");
-        if (!mangaListElement.length) {
+        const theme = params.theme || "";
+        const top = params.region || "";
+        const ordering = params.ordering || "-datetime_updated";
+        const offset = params.offset || 0;
+        const limit = params.limit || 50;
+        const page = Math.floor(offset / limit) + 1;
+        const url = (0, utils_1.generateExploreUrl)(theme, top, ordering, page);
+        const response = await this.client.get(url);
+        const data = JSON.parse(response.data);
+        if (!data.results || !data.results.list) {
             return { results: [], isLastPage: true };
         }
-        const mangaListStr = mangaListElement.attr("list");
-        if (!mangaListStr) {
-            return { results: [], isLastPage: true };
-        }
-        const processedStr = mangaListStr.replace(/\\xa0/g, " ").replace(/'/g, '"');
-        try {
-            const mangaList = JSON.parse(processedStr);
-            const paginationItems = $(".page-all-item");
-            const lastPageItem = paginationItems.last();
-            const hasMore = paginationItems.length > 0 && !lastPageItem.hasClass("active");
-            return (0, utils_1.mangaListToPageResult)(mangaList, hasMore);
-        }
-        catch (error) {
-            console.error("Error parsing manga list:", error);
-            return { results: [], isLastPage: true };
-        }
+        const mangaList = data.results.list;
+        const hasMore = (0, utils_1.hasMorePages)(data.results);
+        return (0, utils_1.mangaListToPageResult)(mangaList, hasMore);
     }
     // Get manga details
     async getContent(contentId) {
-        const url = `${constants_1.BASE_URL}/comic/${contentId}`;
+        const url = (0, utils_1.generateMangaDetailsUrl)(contentId);
         const response = await this.client.get(url);
-        const html = response.data;
-        const $ = cheerio.load(html);
-        const coverElement = $(".comicParticulars-title-left img.lazyload");
-        const coverSrc = coverElement.data("src");
-        const cover = coverSrc ? coverSrc.replace(".328x422.jpg", "") : "";
-        let title = "";
-        const additionalTitles = [];
-        const creators = [];
-        const info = [];
-        let status = daisuke_1.PublicationStatus.ONGOING;
-        const themes = [];
-        const recommendedPanelMode = daisuke_1.ReadingMode.PAGED_MANGA;
-        const infoListItems = $(".comicParticulars-title-right ul li");
-        for (const item of infoListItems) {
-            const titleText = $(item).find("h6").text().trim();
-            if (titleText) {
-                title = titleText;
-                continue;
-            }
-            const label = $(item).find("span").first().text().trim();
-            if (label.includes("別名")) {
-                const text = $(item).find("p").text().trim();
-                const aliases = text.split(",").map((alias) => alias.trim());
-                additionalTitles.push(...aliases);
-            }
-            else if (label.includes("作者")) {
-                for (const creator of $(item).find("span a")) {
-                    const text = $(creator).text().trim();
-                    creators.push(text);
-                }
-            }
-            else if (label.includes("熱度")) {
-                const text = $(item).find(".comicParticulars-right-txt").text().trim();
-                info.push(`🔥熱度: ${text}`);
-            }
-            else if (label.includes("最後更新")) {
-                const text = $(item).find(".comicParticulars-right-txt").text().trim();
-                info.push(`🗓最後更新: ${text}`);
-            }
-            else if (label.includes("狀態")) {
-                const text = $(item).find(".comicParticulars-right-txt").text().trim();
-                status =
-                    text === "連載中"
-                        ? daisuke_1.PublicationStatus.ONGOING
-                        : text === "已完結" || text === "短篇"
-                            ? daisuke_1.PublicationStatus.COMPLETED
-                            : daisuke_1.PublicationStatus.ONGOING;
-            }
-            else if (label.includes("題材")) {
-                const tags = $(item).find("span a");
-                for (const tag of tags) {
-                    const text = $(tag).text().trim().replace("#", "");
-                    const alias = $(tag).attr("href")?.replace("/comics?theme=", "") ?? text;
-                    if (text) {
-                        themes.push({ id: alias, title: text });
-                    }
-                }
-            }
+        const data = JSON.parse(response.data);
+        if (!data.results) {
+            throw new Error("Failed to fetch manga details");
         }
-        const summary = $(".intro").text().trim();
+        const manga = data.results;
+        const cover = manga.cover ? manga.cover.replace(".328x422.jpg", "") : "";
+        const title = manga.name || "";
+        const additionalTitles = manga.alias
+            ? manga.alias.split(",").map((alias) => alias.trim())
+            : [];
+        const creators = manga.author
+            ? manga.author.map((author) => author.name)
+            : [];
+        const summary = manga.brief || "";
+        const status = (0, utils_1.convertStatus)(manga.status);
+        const info = [];
+        if (manga.popular) {
+            info.push(`🔥熱度: ${manga.popular}`);
+        }
+        if (manga.datetime_updated) {
+            info.push(`🗓最後更新: ${manga.datetime_updated}`);
+        }
+        const themes = [];
+        if (manga.theme) {
+            manga.theme.forEach((theme) => {
+                if (theme.name) {
+                    themes.push({
+                        id: theme.path_word || theme.name,
+                        title: theme.name,
+                    });
+                }
+            });
+        }
         return {
             title,
             additionalTitles,
-            recommendedPanelMode,
+            recommendedPanelMode: daisuke_1.ReadingMode.PAGED_MANGA,
             cover,
             creators,
             summary,
             status,
             info,
-            webUrl: url,
+            webUrl: `${constants_1.BASE_URL}/comic/${contentId}`,
             properties: [
                 {
                     id: "theme",
@@ -301,7 +259,7 @@ class Target {
     }
     // Get chapter list for a manga
     async getChapters(contentId) {
-        const url = `${constants_1.BASE_URL}/comicdetail/${contentId}/chapters`;
+        const url = (0, utils_1.generateChapterListUrl)(contentId);
         const response = await this.client.get(url);
         const resultsMatch = response.data.match(/"results":"([^"]+)"/);
         if (!resultsMatch || !resultsMatch[1]) {
@@ -320,34 +278,23 @@ class Target {
     }
     // Get page list for a chapter
     async getChapterData(contentId, chapterId) {
-        const url = `${constants_1.BASE_URL}/comic/${contentId}/chapter/${chapterId}`;
+        const url = (0, utils_1.generatePageListUrl)(contentId, chapterId);
         const response = await this.client.get(url);
-        const $ = cheerio.load(response.data);
-        const imageDataElement = $(".imageData");
-        if (!imageDataElement.length) {
+        const data = JSON.parse(response.data);
+        if (!data.results || !data.results.chapter) {
             return { pages: [] };
         }
-        const encryptedContentKey = imageDataElement.attr("contentkey");
-        if (!encryptedContentKey) {
-            return { pages: [] };
-        }
-        const decryptedContentKey = (0, utils_1.decryptString)(encryptedContentKey);
-        try {
-            const pageList = JSON.parse(decryptedContentKey);
-            // TODO: make this configurable
-            const imageFormat = "jpg";
-            const imageQuality = "c800x";
-            const imageExt = `${imageQuality}.${imageFormat}`;
-            const pages = pageList.map((page, index) => ({
-                index,
-                url: page.url.replace("c800x.jpg", imageExt),
-            }));
-            return { pages };
-        }
-        catch (error) {
-            console.error("Error parsing page list:", error);
-            return { pages: [] };
-        }
+        const chapter = data.results.chapter;
+        const pageList = chapter.contents || [];
+        // Use the image format from the API response
+        const imageFormat = "jpg";
+        const imageQuality = "c800x";
+        const imageExt = `${imageQuality}.${imageFormat}`;
+        const pages = pageList.map((page, index) => ({
+            index,
+            url: page.url,
+        }));
+        return { pages };
     }
     // Get directory config
     async getDirectoryConfig() {
@@ -355,21 +302,21 @@ class Target {
             filters: [
                 {
                     id: "theme",
-                    title: "主題",
+                    title: "題材",
                     type: daisuke_1.FilterType.SELECT,
-                    options: (0, constants_1.getProperties)()[0].tags,
+                    options: (0, constants_1.getProperties)().find((p) => p.id === "theme")?.tags || [],
                 },
                 {
                     id: "status",
                     title: "狀態",
                     type: daisuke_1.FilterType.SELECT,
-                    options: (0, constants_1.getProperties)()[1].tags,
+                    options: (0, constants_1.getProperties)().find((p) => p.id === "status")?.tags || [],
                 },
                 {
                     id: "region",
                     title: "地區",
                     type: daisuke_1.FilterType.SELECT,
-                    options: (0, constants_1.getProperties)()[2].tags,
+                    options: (0, constants_1.getProperties)().find((p) => p.id === "region")?.tags || [],
                 },
             ],
             sort: {
@@ -378,11 +325,44 @@ class Target {
                     id: "datetime_updated",
                     ascending: false,
                 },
-                canChangeOrder: true,
             },
         };
     }
-    // Get properties (tags)
+    // Get listing for a specific category
+    async getListing(listing, page = 1) {
+        let url;
+        switch (listing.id) {
+            case constants_1.LISTING_TYPES.DAY_RANK:
+                url = (0, utils_1.generateRankUrl)(constants_1.LISTING_TYPES.DAY_RANK, page);
+                break;
+            case constants_1.LISTING_TYPES.WEEK_RANK:
+                url = (0, utils_1.generateRankUrl)(constants_1.LISTING_TYPES.WEEK_RANK, page);
+                break;
+            case constants_1.LISTING_TYPES.MONTH_RANK:
+                url = (0, utils_1.generateRankUrl)(constants_1.LISTING_TYPES.MONTH_RANK, page);
+                break;
+            case constants_1.LISTING_TYPES.TOTAL_RANK:
+                url = (0, utils_1.generateRankUrl)(constants_1.LISTING_TYPES.TOTAL_RANK, page);
+                break;
+            case constants_1.LISTING_TYPES.RECS:
+                url = (0, utils_1.generateRecsUrl)(page);
+                break;
+            case constants_1.LISTING_TYPES.NEWEST:
+                url = (0, utils_1.generateNewestUrl)(page);
+                break;
+            default:
+                return this.getDirectory({ page });
+        }
+        const response = await this.client.get(url);
+        const data = JSON.parse(response.data);
+        if (!data.results || !data.results.list) {
+            return { results: [], isLastPage: true };
+        }
+        const mangaList = data.results.list;
+        const hasMore = (0, utils_1.hasMorePages)(data.results);
+        return (0, utils_1.mangaListToPageResult)(mangaList, hasMore);
+    }
+    // Get tags
     async getTags() {
         return (0, constants_1.getProperties)();
     }
@@ -393,7 +373,7 @@ class Target {
 }
 exports.Target = Target;
 
-},{"./constants":1,"./utils":4,"@suwatte/daisuke":5,"cheerio":undefined}],3:[function(require,module,exports){
+},{"./constants":1,"./utils":4,"@suwatte/daisuke":5}],3:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Sort = exports.Region = exports.Status = exports.SearchType = void 0;
@@ -432,7 +412,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.createNetworkRequest = exports.chapterGroupsToChapters = exports.getTimestampFromUuid = exports.parseChapterTitle = exports.convertStatus = exports.mangaListToPageResult = exports.mangaToHighlight = exports.parseSearchRequest = exports.decryptString = void 0;
+exports.hasMorePages = exports.generatePageListUrl = exports.generateChapterListUrl = exports.generateMangaDetailsUrl = exports.generateNewestUrl = exports.generateRecsUrl = exports.generateRankUrl = exports.generateSearchUrl = exports.generateExploreUrl = exports.createNetworkRequest = exports.chapterGroupsToChapters = exports.getTimestampFromUuid = exports.parseChapterTitle = exports.convertStatus = exports.mangaListToPageResult = exports.mangaToHighlight = exports.parseSearchRequest = exports.decryptString = void 0;
 const daisuke_1 = require("@suwatte/daisuke");
 const types_1 = require("./types");
 const constants_1 = require("./constants");
@@ -691,13 +671,51 @@ exports.chapterGroupsToChapters = chapterGroupsToChapters;
 const createNetworkRequest = (url) => {
     return {
         url,
-        headers: {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
-            Referer: constants_1.BASE_URL,
-        },
+        headers: constants_1.API_HEADERS,
     };
 };
 exports.createNetworkRequest = createNetworkRequest;
+// API URL generators
+const generateExploreUrl = (theme, top, ordering, page) => {
+    return `${constants_1.API_URL}/comics?theme=${theme}&top=${top}&ordering=${ordering}&limit=${constants_1.LIMIT}&offset=${(page - 1) * constants_1.LIMIT}`;
+};
+exports.generateExploreUrl = generateExploreUrl;
+const generateSearchUrl = (query, page) => {
+    return `${constants_1.API_URL}/search/comic?q=${encodeURIComponent(query)}&q_type=&limit=${constants_1.LIMIT}&offset=${(page - 1) * constants_1.LIMIT}`;
+};
+exports.generateSearchUrl = generateSearchUrl;
+const generateRankUrl = (dateType, page) => {
+    return `${constants_1.API_URL}/ranks?date_type=${dateType}&limit=${constants_1.LIMIT}&offset=${(page - 1) * constants_1.LIMIT}`;
+};
+exports.generateRankUrl = generateRankUrl;
+const generateRecsUrl = (page) => {
+    return `${constants_1.API_URL}/recs?pos=3200102&limit=${constants_1.LIMIT}&offset=${(page - 1) * constants_1.LIMIT}`;
+};
+exports.generateRecsUrl = generateRecsUrl;
+const generateNewestUrl = (page) => {
+    return `${constants_1.API_URL}/update/newest?limit=${constants_1.LIMIT}&offset=${(page - 1) * constants_1.LIMIT}`;
+};
+exports.generateNewestUrl = generateNewestUrl;
+const generateMangaDetailsUrl = (id) => {
+    return `${constants_1.API_URL}/comic2/${id}`;
+};
+exports.generateMangaDetailsUrl = generateMangaDetailsUrl;
+const generateChapterListUrl = (id) => {
+    return `${constants_1.BASE_URL}/comicdetail/${id}/chapters`;
+};
+exports.generateChapterListUrl = generateChapterListUrl;
+const generatePageListUrl = (mangaId, chapterId) => {
+    return `${constants_1.API_URL}/comic/${mangaId}/chapter/${chapterId}`;
+};
+exports.generatePageListUrl = generatePageListUrl;
+// Check if the API response has more pages
+const hasMorePages = (data) => {
+    const total = data.total || 0;
+    const offset = data.offset || 0;
+    const limit = data.limit || constants_1.LIMIT;
+    return offset + limit < total;
+};
+exports.hasMorePages = hasMorePages;
 
 },{"./constants":1,"./types":3,"@suwatte/daisuke":5,"crypto-js":undefined}],5:[function(require,module,exports){
 "use strict";
