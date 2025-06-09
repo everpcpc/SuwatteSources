@@ -1094,13 +1094,13 @@ const seriesToContent = async (series) => {
     const cover = `${host}/api/v1/series/${series.id}/thumbnail`;
     const info = [];
     if (series.booksCount == series.booksReadCount) {
-        info.push("Finished Reading");
+        info.push("Read: Finished");
     }
     else if (series.booksCount == series.booksUnreadCount) {
-        info.push("Not Started");
+        info.push("Read: Not Started");
     }
     else if (series.booksUnreadCount != 0) {
-        info.push("Started Reading");
+        info.push("Read: Reading");
     }
     if (series.metadata.publisher) {
         info.push(series.metadata.publisher);
