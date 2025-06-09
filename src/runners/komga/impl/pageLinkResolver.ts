@@ -21,7 +21,9 @@ export const KomgaPageLinkResolver: PageLinkResolver = {
     switch (link.id) {
       case "all":
       case "library": {
-        return buildBrowseLibrarySections();
+        const libraryId =
+          (link.context?.libraryId as string | undefined) ?? null;
+        return buildBrowseLibrarySections(libraryId);
       }
     }
 
@@ -45,7 +47,7 @@ export const KomgaPageLinkResolver: PageLinkResolver = {
 };
 
 // Library Sections
-function buildBrowseLibrarySections() {
+async function buildBrowseLibrarySections(libraryId: string | null) {
   const sections: PageSection[] = [];
 
   sections.push({
@@ -54,15 +56,28 @@ function buildBrowseLibrarySections() {
     style: SectionStyle.TAG,
   });
 
-  sections.push({
-    id: "keep_reading",
-    title: "Keep Reading",
-  });
+  // Check if keep_reading has content before adding
+  const keepReadingItems = await getBooksForLibrary(
+    libraryId,
+    buildSort(Sort.ReadDate, false),
+    { read_status: [ReadStatus.InProgress] }
+  );
+  if (keepReadingItems.length > 0) {
+    sections.push({
+      id: "keep_reading",
+      title: "Keep Reading",
+    });
+  }
 
-  sections.push({
-    id: "on_deck",
-    title: "On Deck",
-  });
+  // Check if on_deck has content before adding
+  const onDeckItems = await getBooksOnDeck(libraryId);
+  if (onDeckItems.length > 0) {
+    sections.push({
+      id: "on_deck",
+      title: "On Deck",
+    });
+  }
+
   sections.push({
     id: "recently_added_books",
     title: "Recently Added Books",
@@ -101,21 +116,6 @@ async function resolveLibrarySection(
   switch (sectionKey) {
     case "search_directory": {
       const highlights = [
-        Generate<Highlight>({
-          title: "All Books",
-          cover: "",
-          id: "all_books",
-          link: {
-            request: {
-              page: 1,
-              context: {
-                isSeriesDirectory: false,
-                libraryId,
-              },
-            },
-          },
-        }),
-
         Generate<Highlight>({
           title: "All Series",
           cover: "",

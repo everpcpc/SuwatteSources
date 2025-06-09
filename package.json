@@ -26,6 +26,7 @@
     "@types/he": "^1.1.2",
     "@types/jest": "^29.2.4",
     "@types/lodash": "^4.14.191",
+    "@types/node": "^24.7.2",
     "@types/seedrandom": "^3.0.6",
     "@typescript-eslint/eslint-plugin": "^5.55.0",
     "@typescript-eslint/parser": "^5.55.0",
@@ -50,5 +51,6 @@
   },
   "stt": {
     "listName": "everpcpc's List"
-  }
+  },
+  "packageManager": "pnpm@10.18.2+sha512.9fb969fa749b3ade6035e0f109f0b8a60b5d08a1a87fdf72e337da90dcc93336e2280ca4e44f2358a649b83c17959e9993e777c2080879f3801e6f0d999ad3dd"
 }

@@ -83,12 +83,10 @@ export const seriesToTile = (
 
 export const bookToHighlight = (book: BookDto, host: string): Highlight => {
   return {
-    id: `book:${book.id}`,
+    id: book.seriesId,
     title: book.seriesTitle,
-    subtitle: `${book.metadata.title} • ${book.media.pagesCount} Pages • ${book.size}`,
+    subtitle: `${book.media.pagesCount}p • ${book.metadata.number} - ${book.metadata.title}`,
     cover: `${host}/api/v1/books/${book.id}/thumbnail`,
-    acquisitionLink: `${host}/api/v1/books/${book.id}/file`,
-    streamable: true,
     // Blue Badge if book has not been started
     ...(book.readProgress === null && {
       badge: {
@@ -120,15 +118,20 @@ export const seriesToContent = async (series: SeriesDto): Promise<Content> => {
 
   const info: string[] = [];
   if (series.booksCount == series.booksReadCount) {
-    info.push("Finished Reading");
+    info.push("Finished");
   } else if (series.booksCount == series.booksUnreadCount) {
     info.push("Not Started");
   } else if (series.booksUnreadCount != 0) {
-    info.push("Started Reading");
+    info.push("Reading");
   }
 
   if (series.metadata.publisher) {
     info.push(series.metadata.publisher);
+  }
+
+  const readingDirection = convertReadingMode(series.metadata.readingDirection);
+  if (readingDirection) {
+    info.push(`${series.metadata.readingDirection}`);
   }
 
   if (series.metadata.genres.length != 0) {
@@ -140,11 +143,11 @@ export const seriesToContent = async (series: SeriesDto): Promise<Content> => {
     status: convertStatus(series.metadata.status),
     info,
     summary: series.metadata.summary,
-    recommendedPanelMode: convertReadingMode(series.metadata.readingDirection),
+    recommendedPanelMode: readingDirection,
   };
 };
 
-const convertStatus = (val: string) => {
+const convertStatus = (val: string): PublicationStatus | undefined => {
   val = val.toLowerCase();
 
   switch (val) {
@@ -160,10 +163,13 @@ const convertStatus = (val: string) => {
     case "hiatus": {
       return PublicationStatus.HIATUS;
     }
+    default: {
+      return undefined;
+    }
   }
 };
 
-const convertReadingMode = (val: string) => {
+const convertReadingMode = (val: string): ReadingMode | undefined => {
   val = val.toUpperCase();
 
   switch (val) {
