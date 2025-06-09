@@ -1105,6 +1105,10 @@ const seriesToContent = async (series) => {
     if (series.metadata.publisher) {
         info.push(series.metadata.publisher);
     }
+    const readingDirection = convertReadingMode(series.metadata.readingDirection);
+    if (readingDirection) {
+        info.push(series.metadata.readingDirection);
+    }
     if (series.metadata.genres.length != 0) {
         info.push(...series.metadata.genres);
     }
