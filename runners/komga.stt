@@ -1107,7 +1107,7 @@ const seriesToContent = async (series) => {
     }
     const readingDirection = convertReadingMode(series.metadata.readingDirection);
     if (readingDirection) {
-        info.push(series.metadata.readingDirection);
+        info.push(`${series.metadata.readingDirection}: ${readingDirection}`);
     }
     if (series.metadata.genres.length != 0) {
         info.push(...series.metadata.genres);
@@ -1118,7 +1118,7 @@ const seriesToContent = async (series) => {
         status: convertStatus(series.metadata.status),
         info,
         summary: series.metadata.summary,
-        recommendedPanelMode: convertReadingMode(series.metadata.readingDirection),
+        recommendedPanelMode: readingDirection,
     };
 };
 exports.seriesToContent = seriesToContent;
@@ -1136,6 +1136,9 @@ const convertStatus = (val) => {
         }
         case "hiatus": {
             return daisuke_1.PublicationStatus.HIATUS;
+        }
+        default: {
+            return undefined;
         }
     }
 };
