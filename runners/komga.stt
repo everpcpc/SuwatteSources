@@ -1107,7 +1107,7 @@ const seriesToContent = async (series) => {
     }
     const readingDirection = convertReadingMode(series.metadata.readingDirection);
     if (readingDirection) {
-        info.push(`${series.metadata.readingDirection}: ${readingDirection}`);
+        info.push(`${series.metadata.readingDirection}`);
     }
     if (series.metadata.genres.length != 0) {
         info.push(...series.metadata.genres);
