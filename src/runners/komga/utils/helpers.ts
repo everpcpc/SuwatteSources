@@ -133,7 +133,7 @@ export const seriesToContent = async (series: SeriesDto): Promise<Content> => {
 
   const readingDirection = convertReadingMode(series.metadata.readingDirection);
   if (readingDirection) {
-    info.push(`${series.metadata.readingDirection}: ${readingDirection}`);
+    info.push(`${series.metadata.readingDirection}`);
   }
 
   if (series.metadata.genres.length != 0) {
