@@ -439,7 +439,7 @@ async function fetchDirectory(request) {
     if (!host) {
         throw new Error("Host not defined");
     }
-    const sort = (0, utils_1.convertSort)(request.sort?.id) ?? utils_1.Sort.DateAdded;
+    const sort = (0, utils_1.convertSort)(request.sort?.id) ?? utils_1.Sort.LastUpdated;
     const orderByType = request.sort?.ascending ? types_1.SortOrder.ASC : types_1.SortOrder.DESC;
     const filters = request.filters ?? {};
     let mangas;
