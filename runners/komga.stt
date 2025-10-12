@@ -562,7 +562,8 @@ exports.KomgaPageLinkResolver = {
         switch (link.id) {
             case "all":
             case "library": {
-                return buildBrowseLibrarySections();
+                const libraryId = link.context?.libraryId ?? null;
+                return buildBrowseLibrarySections(libraryId);
             }
         }
         throw new Error(`No Handler Providing sections for ${link.id}`);
@@ -579,21 +580,29 @@ exports.KomgaPageLinkResolver = {
     },
 };
 // Library Sections
-function buildBrowseLibrarySections() {
+async function buildBrowseLibrarySections(libraryId) {
     const sections = [];
     sections.push({
         id: "search_directory",
         title: "Search Komga",
         style: daisuke_1.SectionStyle.TAG,
     });
-    sections.push({
-        id: "keep_reading",
-        title: "Keep Reading",
-    });
-    sections.push({
-        id: "on_deck",
-        title: "On Deck",
-    });
+    // Check if keep_reading has content before adding
+    const keepReadingItems = await (0, library_1.getBooksForLibrary)(libraryId, (0, utils_1.buildSort)(utils_1.Sort.ReadDate, false), { read_status: [utils_1.ReadStatus.InProgress] });
+    if (keepReadingItems.length > 0) {
+        sections.push({
+            id: "keep_reading",
+            title: "Keep Reading",
+        });
+    }
+    // Check if on_deck has content before adding
+    const onDeckItems = await (0, library_1.getBooksOnDeck)(libraryId);
+    if (onDeckItems.length > 0) {
+        sections.push({
+            id: "on_deck",
+            title: "On Deck",
+        });
+    }
     sections.push({
         id: "recently_added_books",
         title: "Recently Added Books",
@@ -1064,10 +1073,17 @@ const bookToHighlight = (book, host) => {
     return {
         id: `book:${book.id}`,
         title: book.seriesTitle,
-        subtitle: `${book.metadata.title} • ${book.media.pagesCount} Pages • ${book.size}`,
+        subtitle: `${book.media.pagesCount}p • ${book.metadata.title} • ${book.size}`,
         cover: `${host}/api/v1/books/${book.id}/thumbnail`,
-        acquisitionLink: `${host}/api/v1/books/${book.id}/file`,
-        streamable: true,
+        link: {
+            request: {
+                configID: "series",
+                page: 1,
+                context: {
+                    seriesId: book.seriesId,
+                },
+            },
+        },
         // Blue Badge if book has not been started
         ...(book.readProgress === null && {
             badge: {
