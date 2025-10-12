@@ -22,7 +22,7 @@ __exportStar(require("./manga"), exports);
 var utils_1 = require("../utils");
 Object.defineProperty(exports, "getHost", { enumerable: true, get: function () { return utils_1.getHost; } });
 
-},{"../utils":17,"./manga":2,"./request":3}],2:[function(require,module,exports){
+},{"../utils":18,"./manga":2,"./request":3}],2:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.searchMangas = exports.getChapterPages = exports.getChaptersForMangaAsChapters = exports.getChaptersForManga = exports.getManga = exports.getMangasInLibrary = void 0;
@@ -171,11 +171,12 @@ exports.getChaptersForMangaAsChapters = getChaptersForMangaAsChapters;
 /**
  * Get chapter pages
  */
-const getChapterPages = async (chapterId) => {
+const getChapterPages = async (mangaId, chapterId) => {
     const query = `
     query GetChapter($id: Int!) {
       chapter(id: $id) {
         id
+        sourceOrder
         pageCount
       }
     }
@@ -184,10 +185,12 @@ const getChapterPages = async (chapterId) => {
         id: chapterId,
     });
     const pageCount = data.chapter.pageCount;
+    const sourceOrder = data.chapter.sourceOrder;
     const host = await (0, utils_1.getHost)();
     const pages = [];
     for (let i = 0; i < pageCount; i++) {
-        pages.push(`${host}/api/manga/chapter/${chapterId}/page/${i}`);
+        const pageUrl = `${host}/api/v1/manga/${mangaId}/chapter/${sourceOrder}/page/${i}`;
+        pages.push(pageUrl);
     }
     return pages;
 };
@@ -233,7 +236,7 @@ const searchMangas = async (query, page = 1) => {
 };
 exports.searchMangas = searchMangas;
 
-},{"../types":14,"../utils":17,"./request":3}],3:[function(require,module,exports){
+},{"../types":15,"../utils":18,"./request":3}],3:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.simpleReq = exports.graphqlRequest = void 0;
@@ -307,7 +310,58 @@ const simpleReq = async (req) => {
 };
 exports.simpleReq = simpleReq;
 
-},{"../store":13}],4:[function(require,module,exports){
+},{"../store":14}],4:[function(require,module,exports){
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.SuwayomiChapterEvent = void 0;
+const api_1 = require("../api");
+exports.SuwayomiChapterEvent = {
+    onChaptersMarked: async function (_, chapterIds, completed) {
+        const promises = chapterIds.map((v) => markAsRead(v, completed));
+        const state = await Promise.allSettled(promises);
+        const failing = state.filter((v) => v.status === "rejected").length;
+        if (failing) {
+            console.error(`Failed to mark ${failing} Chapters`);
+        }
+    },
+    onChapterRead: async function (_, chapterId) {
+        return markAsRead(chapterId);
+    },
+    async onPageRead(_, chapterId, page) {
+        const mutation = `
+      mutation UpdateChapterProgress($id: Int!, $lastPageRead: Int!) {
+        updateChapter(input: { id: $id, patch: { lastPageRead: $lastPageRead } }) {
+          chapter {
+            id
+            lastPageRead
+          }
+        }
+      }
+    `;
+        return (0, api_1.graphqlRequest)(mutation, {
+            id: parseInt(chapterId),
+            lastPageRead: page,
+        });
+    },
+};
+const markAsRead = async (chapterId, completed = true) => {
+    const mutation = `
+    mutation UpdateChapterRead($id: Int!, $isRead: Boolean!) {
+      updateChapter(input: { id: $id, patch: { isRead: $isRead } }) {
+        chapter {
+          id
+          isRead
+        }
+      }
+    }
+  `;
+    await (0, api_1.graphqlRequest)(mutation, {
+        id: parseInt(chapterId),
+        isRead: completed,
+    });
+};
+
+},{"../api":1}],5:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.SuwayomiContentSource = void 0;
@@ -321,8 +375,8 @@ exports.SuwayomiContentSource = {
     getChapters: async function (contentId) {
         return (0, api_1.getChaptersForMangaAsChapters)(parseInt(contentId));
     },
-    getChapterData: async function (_contentId, chapterId) {
-        const pages = await (0, api_1.getChapterPages)(parseInt(chapterId));
+    getChapterData: async function (contentId, chapterId) {
+        const pages = await (0, api_1.getChapterPages)(parseInt(contentId), parseInt(chapterId));
         const chapterPages = pages.map((url) => ({
             url,
         }));
@@ -332,7 +386,7 @@ exports.SuwayomiContentSource = {
     },
 };
 
-},{"../api":1,"../utils":17}],5:[function(require,module,exports){
+},{"../api":1,"../utils":18}],6:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.SuwayomiDirectoryHandler = void 0;
@@ -384,7 +438,7 @@ async function fetchDirectory(request) {
     };
 }
 
-},{"../api":1,"../types":14,"../utils":17}],6:[function(require,module,exports){
+},{"../api":1,"../types":15,"../utils":18}],7:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.SuwayomiImageHandler = void 0;
@@ -396,7 +450,7 @@ exports.SuwayomiImageHandler = {
     },
 };
 
-},{}],7:[function(require,module,exports){
+},{}],8:[function(require,module,exports){
 "use strict";
 var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
     if (k2 === undefined) k2 = k;
@@ -420,8 +474,9 @@ __exportStar(require("./preference"), exports);
 __exportStar(require("./imageHandler"), exports);
 __exportStar(require("./setup"), exports);
 __exportStar(require("./progressSync"), exports);
+__exportStar(require("./chapterEvent"), exports);
 
-},{"./contentSource":4,"./directoryHandler":5,"./imageHandler":6,"./pageLinkProvider":8,"./preference":9,"./progressSync":10,"./setup":11}],8:[function(require,module,exports){
+},{"./chapterEvent":4,"./contentSource":5,"./directoryHandler":6,"./imageHandler":7,"./pageLinkProvider":9,"./preference":10,"./progressSync":11,"./setup":12}],9:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.SuwayomiPageProvider = void 0;
@@ -452,7 +507,7 @@ exports.SuwayomiPageProvider = {
     },
 };
 
-},{}],9:[function(require,module,exports){
+},{}],10:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.SuwayomiPreferenceProvider = void 0;
@@ -464,7 +519,7 @@ exports.SuwayomiPreferenceProvider = {
     },
 };
 
-},{}],10:[function(require,module,exports){
+},{}],11:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.SuwayomiProgressProvider = void 0;
@@ -496,19 +551,23 @@ exports.SuwayomiProgressProvider = {
         if (!lastReadChapter) {
             return { readChapterIds };
         }
+        const readDate = new Date(lastReadChapter.lastReadAt);
+        if (isNaN(readDate.getTime())) {
+            return { readChapterIds };
+        }
         return {
             readChapterIds,
             currentReadingState: {
                 chapterId: lastReadChapter.id.toString(),
                 page: lastReadChapter.lastPageRead,
-                readDate: new Date(lastReadChapter.lastReadAt),
-                progress: 0,
+                readDate,
+                progress: Math.round((lastReadChapter.lastPageRead / lastReadChapter.pageCount) * 100) / 100,
             },
         };
     },
 };
 
-},{"../api":1}],11:[function(require,module,exports){
+},{"../api":1}],12:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.SuwayomiSetupProvider = void 0;
@@ -565,7 +624,7 @@ exports.SuwayomiSetupProvider = {
     },
 };
 
-},{"../api/request":3,"../store":13,"@suwatte/daisuke":18}],12:[function(require,module,exports){
+},{"../api/request":3,"../store":14,"@suwatte/daisuke":19}],13:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Target = void 0;
@@ -603,11 +662,12 @@ exports.Target = {
     ...impl_1.SuwayomiPageProvider,
     ...impl_1.SuwayomiPreferenceProvider,
     ...impl_1.SuwayomiImageHandler,
+    ...impl_1.SuwayomiChapterEvent,
     ...impl_1.SuwayomiSetupProvider,
     ...impl_1.SuwayomiProgressProvider,
 };
 
-},{"./impl":7,"@suwatte/daisuke":18}],13:[function(require,module,exports){
+},{"./impl":8,"@suwatte/daisuke":19}],14:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.SuwayomiStore = void 0;
@@ -624,7 +684,7 @@ exports.SuwayomiStore = {
     },
 };
 
-},{}],14:[function(require,module,exports){
+},{}],15:[function(require,module,exports){
 "use strict";
 // Suwayomi GraphQL Types
 Object.defineProperty(exports, "__esModule", { value: true });
@@ -645,7 +705,7 @@ var SortOrder;
     SortOrder["DESC"] = "DESC";
 })(SortOrder = exports.SortOrder || (exports.SortOrder = {}));
 
-},{}],15:[function(require,module,exports){
+},{}],16:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.FilterOptions = exports.ReadStatus = exports.MangaStatusEnum = exports.RESULT_COUNT = exports.SortOptions = exports.Sort = void 0;
@@ -717,7 +777,7 @@ exports.FilterOptions = [
     },
 ];
 
-},{"@suwatte/daisuke":18}],16:[function(require,module,exports){
+},{"@suwatte/daisuke":19}],17:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.mangaToContent = exports.chapterToChapter = exports.mangaToTile = exports.genURL = exports.convertSort = exports.getHost = void 0;
@@ -775,10 +835,12 @@ const mangaToTile = (manga, host) => {
 };
 exports.mangaToTile = mangaToTile;
 const chapterToChapter = (chapter, host, index) => {
+    const date = new Date(chapter.fetchedAt);
+    const chapterDate = isNaN(date.getTime()) ? new Date() : date;
     return {
         chapterId: chapter.id.toString(),
         title: chapter.name,
-        date: new Date(chapter.fetchedAt),
+        date: chapterDate,
         number: chapter.chapterNumber,
         index,
         language: daisuke_1.DefinedLanguages.UNIVERSAL,
@@ -836,7 +898,7 @@ const convertStatus = (val) => {
     }
 };
 
-},{"../types":14,"./constants":15,"@suwatte/daisuke":18}],17:[function(require,module,exports){
+},{"../types":15,"./constants":16,"@suwatte/daisuke":19}],18:[function(require,module,exports){
 "use strict";
 var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
     if (k2 === undefined) k2 = k;
@@ -856,7 +918,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 __exportStar(require("./constants"), exports);
 __exportStar(require("./helpers"), exports);
 
-},{"./constants":15,"./helpers":16}],18:[function(require,module,exports){
+},{"./constants":16,"./helpers":17}],19:[function(require,module,exports){
 "use strict";
 var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
     if (k2 === undefined) k2 = k;
@@ -876,27 +938,27 @@ Object.defineProperty(exports, "__esModule", { value: true });
 __exportStar(require("./runners"), exports);
 __exportStar(require("./types"), exports);
 
-},{"./runners":42,"./types":72}],19:[function(require,module,exports){
+},{"./runners":43,"./types":73}],20:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 
-},{}],20:[function(require,module,exports){
-arguments[4][19][0].apply(exports,arguments)
-},{"dup":19}],21:[function(require,module,exports){
-arguments[4][19][0].apply(exports,arguments)
-},{"dup":19}],22:[function(require,module,exports){
-arguments[4][19][0].apply(exports,arguments)
-},{"dup":19}],23:[function(require,module,exports){
-arguments[4][19][0].apply(exports,arguments)
-},{"dup":19}],24:[function(require,module,exports){
-arguments[4][19][0].apply(exports,arguments)
-},{"dup":19}],25:[function(require,module,exports){
-arguments[4][19][0].apply(exports,arguments)
-},{"dup":19}],26:[function(require,module,exports){
-arguments[4][19][0].apply(exports,arguments)
-},{"dup":19}],27:[function(require,module,exports){
-arguments[4][19][0].apply(exports,arguments)
-},{"dup":19}],28:[function(require,module,exports){
+},{}],21:[function(require,module,exports){
+arguments[4][20][0].apply(exports,arguments)
+},{"dup":20}],22:[function(require,module,exports){
+arguments[4][20][0].apply(exports,arguments)
+},{"dup":20}],23:[function(require,module,exports){
+arguments[4][20][0].apply(exports,arguments)
+},{"dup":20}],24:[function(require,module,exports){
+arguments[4][20][0].apply(exports,arguments)
+},{"dup":20}],25:[function(require,module,exports){
+arguments[4][20][0].apply(exports,arguments)
+},{"dup":20}],26:[function(require,module,exports){
+arguments[4][20][0].apply(exports,arguments)
+},{"dup":20}],27:[function(require,module,exports){
+arguments[4][20][0].apply(exports,arguments)
+},{"dup":20}],28:[function(require,module,exports){
+arguments[4][20][0].apply(exports,arguments)
+},{"dup":20}],29:[function(require,module,exports){
 "use strict";
 var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
     if (k2 === undefined) k2 = k;
@@ -922,7 +984,7 @@ __exportStar(require("./ContextMenuHandler"), exports);
 __exportStar(require("./GroupedUpdateProvider"), exports);
 __exportStar(require("./ImageRedrawHandler"), exports);
 
-},{"./ChapterEvent":20,"./ContentEvent":21,"./ContextMenuHandler":22,"./GroupedUpdateProvider":23,"./ImageRedrawHandler":24,"./LibrarySync":25,"./ProgressSync":26,"./StreamContextProvider":27}],29:[function(require,module,exports){
+},{"./ChapterEvent":21,"./ContentEvent":22,"./ContextMenuHandler":23,"./GroupedUpdateProvider":24,"./ImageRedrawHandler":25,"./LibrarySync":26,"./ProgressSync":27,"./StreamContextProvider":28}],30:[function(require,module,exports){
 "use strict";
 var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
     if (k2 === undefined) k2 = k;
@@ -942,11 +1004,11 @@ Object.defineProperty(exports, "__esModule", { value: true });
 __exportStar(require("./handlers"), exports);
 __exportStar(require("./ContentSource"), exports);
 
-},{"./ContentSource":19,"./handlers":28}],30:[function(require,module,exports){
-arguments[4][19][0].apply(exports,arguments)
-},{"dup":19}],31:[function(require,module,exports){
-arguments[4][19][0].apply(exports,arguments)
-},{"dup":19}],32:[function(require,module,exports){
+},{"./ContentSource":20,"./handlers":29}],31:[function(require,module,exports){
+arguments[4][20][0].apply(exports,arguments)
+},{"dup":20}],32:[function(require,module,exports){
+arguments[4][20][0].apply(exports,arguments)
+},{"dup":20}],33:[function(require,module,exports){
 "use strict";
 var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
     if (k2 === undefined) k2 = k;
@@ -966,7 +1028,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 __exportStar(require("./ContentTracker"), exports);
 __exportStar(require("./AdvancedTracker"), exports);
 
-},{"./AdvancedTracker":30,"./ContentTracker":31}],33:[function(require,module,exports){
+},{"./AdvancedTracker":31,"./ContentTracker":32}],34:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.BasicAuthenticationUIIdentifier = void 0;
@@ -976,19 +1038,19 @@ var BasicAuthenticationUIIdentifier;
     BasicAuthenticationUIIdentifier[BasicAuthenticationUIIdentifier["USERNAME"] = 1] = "USERNAME";
 })(BasicAuthenticationUIIdentifier || (exports.BasicAuthenticationUIIdentifier = BasicAuthenticationUIIdentifier = {}));
 
-},{}],34:[function(require,module,exports){
-arguments[4][19][0].apply(exports,arguments)
-},{"dup":19}],35:[function(require,module,exports){
-arguments[4][19][0].apply(exports,arguments)
-},{"dup":19}],36:[function(require,module,exports){
-arguments[4][19][0].apply(exports,arguments)
-},{"dup":19}],37:[function(require,module,exports){
-arguments[4][19][0].apply(exports,arguments)
-},{"dup":19}],38:[function(require,module,exports){
-arguments[4][19][0].apply(exports,arguments)
-},{"dup":19}],39:[function(require,module,exports){
-arguments[4][19][0].apply(exports,arguments)
-},{"dup":19}],40:[function(require,module,exports){
+},{}],35:[function(require,module,exports){
+arguments[4][20][0].apply(exports,arguments)
+},{"dup":20}],36:[function(require,module,exports){
+arguments[4][20][0].apply(exports,arguments)
+},{"dup":20}],37:[function(require,module,exports){
+arguments[4][20][0].apply(exports,arguments)
+},{"dup":20}],38:[function(require,module,exports){
+arguments[4][20][0].apply(exports,arguments)
+},{"dup":20}],39:[function(require,module,exports){
+arguments[4][20][0].apply(exports,arguments)
+},{"dup":20}],40:[function(require,module,exports){
+arguments[4][20][0].apply(exports,arguments)
+},{"dup":20}],41:[function(require,module,exports){
 "use strict";
 var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
     if (k2 === undefined) k2 = k;
@@ -1013,7 +1075,7 @@ __exportStar(require("./PageProvider"), exports);
 __exportStar(require("./Setup"), exports);
 __exportStar(require("./PageResolver"), exports);
 
-},{"./Authentication":33,"./DirectoryHandler":34,"./ImageRequest":35,"./PageProvider":36,"./PageResolver":37,"./Preferences":38,"./Setup":39}],41:[function(require,module,exports){
+},{"./Authentication":34,"./DirectoryHandler":35,"./ImageRequest":36,"./PageProvider":37,"./PageResolver":38,"./Preferences":39,"./Setup":40}],42:[function(require,module,exports){
 "use strict";
 var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
     if (k2 === undefined) k2 = k;
@@ -1038,7 +1100,7 @@ var RunnerEnvironment;
     RunnerEnvironment[RunnerEnvironment["TRACKER"] = 1] = "TRACKER";
 })(RunnerEnvironment || (exports.RunnerEnvironment = RunnerEnvironment = {}));
 
-},{"./extensions":40}],42:[function(require,module,exports){
+},{"./extensions":41}],43:[function(require,module,exports){
 "use strict";
 var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
     if (k2 === undefined) k2 = k;
@@ -1059,14 +1121,14 @@ __exportStar(require("./ContentSource"), exports);
 __exportStar(require("./Runner"), exports);
 __exportStar(require("./ContentTracker"), exports);
 
-},{"./ContentSource":29,"./ContentTracker":32,"./Runner":41}],43:[function(require,module,exports){
-arguments[4][19][0].apply(exports,arguments)
-},{"dup":19}],44:[function(require,module,exports){
+},{"./ContentSource":30,"./ContentTracker":33,"./Runner":42}],44:[function(require,module,exports){
+arguments[4][20][0].apply(exports,arguments)
+},{"dup":20}],45:[function(require,module,exports){
 "use strict";
 // Picker
 Object.defineProperty(exports, "__esModule", { value: true });
 
-},{}],45:[function(require,module,exports){
+},{}],46:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.UIStepper = exports.UIButton = exports.UIDatePicker = exports.UITextField = exports.UIToggle = exports.UIMultiPicker = exports.UIPicker = void 0;
@@ -1086,7 +1148,7 @@ exports.UIButton = UIButton;
 const UIStepper = (props) => (Object.assign(Object.assign({}, props), { type: UIElements_1.UIComponentType.STEPPER }));
 exports.UIStepper = UIStepper;
 
-},{"./UIElements":46}],46:[function(require,module,exports){
+},{"./UIElements":47}],47:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.UIComponentType = void 0;
@@ -1101,7 +1163,7 @@ var UIComponentType;
     UIComponentType[UIComponentType["DATEPICKER"] = 6] = "DATEPICKER";
 })(UIComponentType || (exports.UIComponentType = UIComponentType = {}));
 
-},{}],47:[function(require,module,exports){
+},{}],48:[function(require,module,exports){
 "use strict";
 var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
     if (k2 === undefined) k2 = k;
@@ -1123,9 +1185,9 @@ __exportStar(require("./UIElements"), exports);
 __exportStar(require("./UIDefinitions"), exports);
 __exportStar(require("./UIElementBuilders"), exports);
 
-},{"./Form":43,"./UIDefinitions":44,"./UIElementBuilders":45,"./UIElements":46}],48:[function(require,module,exports){
-arguments[4][19][0].apply(exports,arguments)
-},{"dup":19}],49:[function(require,module,exports){
+},{"./Form":44,"./UIDefinitions":45,"./UIElementBuilders":46,"./UIElements":47}],49:[function(require,module,exports){
+arguments[4][20][0].apply(exports,arguments)
+},{"dup":20}],50:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.DefinedLanguages = void 0;
@@ -1141,19 +1203,19 @@ var DefinedLanguages;
     DefinedLanguages["PORTUGUESE"] = "pt_BR";
 })(DefinedLanguages || (exports.DefinedLanguages = DefinedLanguages = {}));
 
-},{}],50:[function(require,module,exports){
-arguments[4][19][0].apply(exports,arguments)
-},{"dup":19}],51:[function(require,module,exports){
-arguments[4][19][0].apply(exports,arguments)
-},{"dup":19}],52:[function(require,module,exports){
-arguments[4][19][0].apply(exports,arguments)
-},{"dup":19}],53:[function(require,module,exports){
-arguments[4][19][0].apply(exports,arguments)
-},{"dup":19}],54:[function(require,module,exports){
-arguments[4][19][0].apply(exports,arguments)
-},{"dup":19}],55:[function(require,module,exports){
-arguments[4][19][0].apply(exports,arguments)
-},{"dup":19}],56:[function(require,module,exports){
+},{}],51:[function(require,module,exports){
+arguments[4][20][0].apply(exports,arguments)
+},{"dup":20}],52:[function(require,module,exports){
+arguments[4][20][0].apply(exports,arguments)
+},{"dup":20}],53:[function(require,module,exports){
+arguments[4][20][0].apply(exports,arguments)
+},{"dup":20}],54:[function(require,module,exports){
+arguments[4][20][0].apply(exports,arguments)
+},{"dup":20}],55:[function(require,module,exports){
+arguments[4][20][0].apply(exports,arguments)
+},{"dup":20}],56:[function(require,module,exports){
+arguments[4][20][0].apply(exports,arguments)
+},{"dup":20}],57:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ContentType = exports.ReadingFlag = exports.ReadingMode = exports.PublicationStatus = void 0;
@@ -1194,13 +1256,13 @@ var ContentType;
     ContentType[ContentType["NOVEL"] = 4] = "NOVEL";
 })(ContentType || (exports.ContentType = ContentType = {}));
 
-},{}],57:[function(require,module,exports){
-arguments[4][19][0].apply(exports,arguments)
-},{"dup":19}],58:[function(require,module,exports){
-arguments[4][19][0].apply(exports,arguments)
-},{"dup":19}],59:[function(require,module,exports){
-arguments[4][19][0].apply(exports,arguments)
-},{"dup":19}],60:[function(require,module,exports){
+},{}],58:[function(require,module,exports){
+arguments[4][20][0].apply(exports,arguments)
+},{"dup":20}],59:[function(require,module,exports){
+arguments[4][20][0].apply(exports,arguments)
+},{"dup":20}],60:[function(require,module,exports){
+arguments[4][20][0].apply(exports,arguments)
+},{"dup":20}],61:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ProviderLinkType = void 0;
@@ -1212,9 +1274,9 @@ var ProviderLinkType;
     ProviderLinkType[ProviderLinkType["PATREON"] = 3] = "PATREON";
 })(ProviderLinkType || (exports.ProviderLinkType = ProviderLinkType = {}));
 
-},{}],61:[function(require,module,exports){
-arguments[4][19][0].apply(exports,arguments)
-},{"dup":19}],62:[function(require,module,exports){
+},{}],62:[function(require,module,exports){
+arguments[4][20][0].apply(exports,arguments)
+},{"dup":20}],63:[function(require,module,exports){
 "use strict";
 var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
     if (k2 === undefined) k2 = k;
@@ -1246,7 +1308,7 @@ __exportStar(require("./BooleanState"), exports);
 __exportStar(require("./ContentProgressState"), exports);
 __exportStar(require("./GroupedUpdatesResponse"), exports);
 
-},{"./BooleanState":48,"./Chapter":49,"./ChapterData":50,"./Collection":51,"./Content":52,"./ContentProgressState":53,"./ContextMenu":54,"./DeepLinkContext":55,"./Enums":56,"./GroupedUpdatesResponse":57,"./Highlight":58,"./Property":59,"./Provider":60,"./ReaderContext":61}],63:[function(require,module,exports){
+},{"./BooleanState":49,"./Chapter":50,"./ChapterData":51,"./Collection":52,"./Content":53,"./ContentProgressState":54,"./ContextMenu":55,"./DeepLinkContext":56,"./Enums":57,"./GroupedUpdatesResponse":58,"./Highlight":59,"./Property":60,"./Provider":61,"./ReaderContext":62}],64:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.AuthMethod = void 0;
@@ -1258,11 +1320,11 @@ var AuthMethod;
     AuthMethod[AuthMethod["OAUTH"] = 3] = "OAUTH";
 })(AuthMethod || (exports.AuthMethod = AuthMethod = {}));
 
-},{}],64:[function(require,module,exports){
-arguments[4][19][0].apply(exports,arguments)
-},{"dup":19}],65:[function(require,module,exports){
-arguments[4][19][0].apply(exports,arguments)
-},{"dup":19}],66:[function(require,module,exports){
+},{}],65:[function(require,module,exports){
+arguments[4][20][0].apply(exports,arguments)
+},{"dup":20}],66:[function(require,module,exports){
+arguments[4][20][0].apply(exports,arguments)
+},{"dup":20}],67:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.CatalogRating = void 0;
@@ -1285,7 +1347,7 @@ var CatalogRating;
     CatalogRating[CatalogRating["NSFW"] = 2] = "NSFW";
 })(CatalogRating || (exports.CatalogRating = CatalogRating = {}));
 
-},{}],67:[function(require,module,exports){
+},{}],68:[function(require,module,exports){
 "use strict";
 var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
     if (k2 === undefined) k2 = k;
@@ -1307,9 +1369,9 @@ __exportStar(require("./RunnerInfo"), exports);
 __exportStar(require("./PagedResult"), exports);
 __exportStar(require("./ContextProvider"), exports);
 
-},{"./Authentication":63,"./ContextProvider":64,"./PagedResult":65,"./RunnerInfo":66}],68:[function(require,module,exports){
-arguments[4][19][0].apply(exports,arguments)
-},{"dup":19}],69:[function(require,module,exports){
+},{"./Authentication":64,"./ContextProvider":65,"./PagedResult":66,"./RunnerInfo":67}],69:[function(require,module,exports){
+arguments[4][20][0].apply(exports,arguments)
+},{"dup":20}],70:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.FilterType = void 0;
@@ -1341,9 +1403,9 @@ var FilterType;
     FilterType[FilterType["INFO"] = 5] = "INFO";
 })(FilterType || (exports.FilterType = FilterType = {}));
 
-},{}],70:[function(require,module,exports){
-arguments[4][19][0].apply(exports,arguments)
-},{"dup":19}],71:[function(require,module,exports){
+},{}],71:[function(require,module,exports){
+arguments[4][20][0].apply(exports,arguments)
+},{"dup":20}],72:[function(require,module,exports){
 "use strict";
 var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
     if (k2 === undefined) k2 = k;
@@ -1364,7 +1426,7 @@ __exportStar(require("./DirectoryConfig"), exports);
 __exportStar(require("./DirectoryRequest"), exports);
 __exportStar(require("./DirectoryFilter"), exports);
 
-},{"./DirectoryConfig":68,"./DirectoryFilter":69,"./DirectoryRequest":70}],72:[function(require,module,exports){
+},{"./DirectoryConfig":69,"./DirectoryFilter":70,"./DirectoryRequest":71}],73:[function(require,module,exports){
 "use strict";
 var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
     if (k2 === undefined) k2 = k;
@@ -1392,7 +1454,7 @@ __exportStar(require("./page"), exports);
 const Generate = (v) => v;
 exports.Generate = Generate;
 
-},{"./UI":47,"./content":62,"./core":67,"./directory":71,"./networking":79,"./page":80,"./tracker":81}],73:[function(require,module,exports){
+},{"./UI":48,"./content":63,"./core":68,"./directory":72,"./networking":80,"./page":81,"./tracker":82}],74:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.NetworkClientBuilder = void 0;
@@ -1514,11 +1576,11 @@ class NetworkClientBuilder {
 }
 exports.NetworkClientBuilder = NetworkClientBuilder;
 
-},{}],74:[function(require,module,exports){
-arguments[4][19][0].apply(exports,arguments)
-},{"dup":19}],75:[function(require,module,exports){
-arguments[4][19][0].apply(exports,arguments)
-},{"dup":19}],76:[function(require,module,exports){
+},{}],75:[function(require,module,exports){
+arguments[4][20][0].apply(exports,arguments)
+},{"dup":20}],76:[function(require,module,exports){
+arguments[4][20][0].apply(exports,arguments)
+},{"dup":20}],77:[function(require,module,exports){
 "use strict";
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
@@ -1536,11 +1598,11 @@ const name = (base, known) => __awaiter(void 0, void 0, void 0, function* () {
 });
 exports.name = name;
 
-},{}],77:[function(require,module,exports){
-arguments[4][19][0].apply(exports,arguments)
-},{"dup":19}],78:[function(require,module,exports){
-arguments[4][19][0].apply(exports,arguments)
-},{"dup":19}],79:[function(require,module,exports){
+},{}],78:[function(require,module,exports){
+arguments[4][20][0].apply(exports,arguments)
+},{"dup":20}],79:[function(require,module,exports){
+arguments[4][20][0].apply(exports,arguments)
+},{"dup":20}],80:[function(require,module,exports){
 "use strict";
 var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
     if (k2 === undefined) k2 = k;
@@ -1564,7 +1626,7 @@ __exportStar(require("./Response"), exports);
 __exportStar(require("./Transformer"), exports);
 __exportStar(require("./Error"), exports);
 
-},{"./Builder":73,"./Client":74,"./Error":75,"./Request":76,"./Response":77,"./Transformer":78}],80:[function(require,module,exports){
+},{"./Builder":74,"./Client":75,"./Error":76,"./Request":77,"./Response":78,"./Transformer":79}],81:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.SectionStyle = void 0;
@@ -1580,7 +1642,7 @@ var SectionStyle;
     SectionStyle[SectionStyle["STANDARD_GRID"] = 7] = "STANDARD_GRID";
 })(SectionStyle || (exports.SectionStyle = SectionStyle = {}));
 
-},{}],81:[function(require,module,exports){
+},{}],82:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.TrackStatus = void 0;
@@ -1594,5 +1656,5 @@ var TrackStatus;
     TrackStatus["REREADING"] = "REREADING";
 })(TrackStatus || (exports.TrackStatus = TrackStatus = {}));
 
-},{}]},{},[12])(12)
+},{}]},{},[13])(13)
 });
