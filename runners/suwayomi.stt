@@ -569,7 +569,7 @@ exports.SuwayomiProgressProvider = {
         if (!lastReadChapter) {
             return { readChapterIds };
         }
-        const readDate = new Date(lastReadChapter.lastReadAt);
+        const readDate = new Date(lastReadChapter.lastReadAt * 1000);
         if (isNaN(readDate.getTime())) {
             return { readChapterIds };
         }
@@ -853,7 +853,7 @@ const mangaToTile = (manga, host) => {
 };
 exports.mangaToTile = mangaToTile;
 const chapterToChapter = (chapter, host, index) => {
-    const date = new Date(chapter.fetchedAt);
+    const date = new Date(chapter.fetchedAt * 1000);
     const chapterDate = isNaN(date.getTime()) ? new Date() : date;
     return {
         chapterId: chapter.id.toString(),
