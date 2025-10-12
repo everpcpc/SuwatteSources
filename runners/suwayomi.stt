@@ -853,7 +853,7 @@ const mangaToTile = (manga, host) => {
 exports.mangaToTile = mangaToTile;
 const chapterToChapter = (chapter, host, index) => {
     const date = new Date(chapter.uploadDate);
-    const chapterDate = isNaN(date.getTime()) ? new Date() : date;
+    const chapterDate = isNaN(date.getTime()) ? new Date(0) : date;
     return {
         chapterId: chapter.id.toString(),
         title: chapter.name,
