@@ -25,7 +25,7 @@ export async function request<T>(req: NetworkRequest) {
     },
   });
 
-  if (!data) return {} as T;
+  if (!data || data.length === 0) return {} as T;
   const object = JSON.parse(data);
   return object as T;
 }
@@ -33,6 +33,7 @@ export async function request<T>(req: NetworkRequest) {
 export const simpleReq = async (req: NetworkRequest) => {
   const client = new NetworkClient();
   const { data } = await client.request(req);
+  if (!data || data.length === 0) return {};
   const object = JSON.parse(data);
   return object;
 };
