@@ -111,7 +111,7 @@ const getManga = async (id) => {
             isDownloaded
             pageCount
             lastPageRead
-            fetchedAt
+            uploadDate
           }
           totalCount
         }
@@ -151,7 +151,6 @@ const getChaptersForManga = async (mangaId) => {
           pageCount
           lastPageRead
           lastReadAt
-          fetchedAt
           uploadDate
           scanlator
           url
