@@ -171,8 +171,7 @@ exports.getChaptersForManga = getChaptersForManga;
  */
 const getChaptersForMangaAsChapters = async (mangaId) => {
     const chapters = await (0, exports.getChaptersForManga)(mangaId);
-    const host = await (0, utils_1.getHost)();
-    const items = chapters.map((chapter, idx) => (0, utils_1.chapterToChapter)(chapter, host, idx));
+    const items = chapters.map((chapter, idx) => (0, utils_1.chapterToChapter)(chapter, idx));
     return items;
 };
 exports.getChaptersForMangaAsChapters = getChaptersForMangaAsChapters;
@@ -564,14 +563,15 @@ exports.SuwayomiProgressProvider = {
         const readChapterIds = chapters
             .filter((ch) => ch.isRead)
             .map((ch) => ch.id.toString());
-        const lastReadChapter = chapters.find((ch) => ch.lastReadAt > 0);
+        const lastReadChapter = chapters.find((ch) => Boolean(ch.lastReadAt));
         if (!lastReadChapter) {
             return { readChapterIds };
         }
-        const readDate = new Date(lastReadChapter.lastReadAt * 1000);
-        if (isNaN(readDate.getTime())) {
+        const lastReadAt = parseInt(lastReadChapter.lastReadAt);
+        if (isNaN(lastReadAt)) {
             return { readChapterIds };
         }
+        const readDate = new Date(lastReadAt * 1000);
         return {
             readChapterIds,
             currentReadingState: {
@@ -851,8 +851,8 @@ const mangaToTile = (manga, host) => {
     };
 };
 exports.mangaToTile = mangaToTile;
-const chapterToChapter = (chapter, host, index) => {
-    const date = new Date(chapter.uploadDate);
+const chapterToChapter = (chapter, index) => {
+    const date = new Date(parseInt(chapter.uploadDate));
     const chapterDate = isNaN(date.getTime()) ? new Date(0) : date;
     return {
         chapterId: chapter.id.toString(),
