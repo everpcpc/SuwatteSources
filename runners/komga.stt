@@ -631,20 +631,6 @@ async function resolveLibrarySection(libraryId, sectionKey) {
         case "search_directory": {
             const highlights = [
                 (0, daisuke_1.Generate)({
-                    title: "All Books",
-                    cover: "",
-                    id: "all_books",
-                    link: {
-                        request: {
-                            page: 1,
-                            context: {
-                                isSeriesDirectory: false,
-                                libraryId,
-                            },
-                        },
-                    },
-                }),
-                (0, daisuke_1.Generate)({
                     title: "All Series",
                     cover: "",
                     id: "all_series",
@@ -1071,19 +1057,10 @@ const seriesToTile = (series, host, asRequest) => {
 exports.seriesToTile = seriesToTile;
 const bookToHighlight = (book, host) => {
     return {
-        id: `book:${book.id}`,
+        id: book.seriesId,
         title: book.seriesTitle,
         subtitle: `${book.media.pagesCount}p • ${book.metadata.title} • ${book.size}`,
         cover: `${host}/api/v1/books/${book.id}/thumbnail`,
-        link: {
-            request: {
-                configID: "series",
-                page: 1,
-                context: {
-                    seriesId: book.seriesId,
-                },
-            },
-        },
         // Blue Badge if book has not been started
         ...(book.readProgress === null && {
             badge: {
