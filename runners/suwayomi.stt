@@ -32,10 +32,10 @@ const utils_1 = require("../utils");
 /**
  * Get all mangas in library
  */
-const getMangasInLibrary = async (orderBy = "IN_LIBRARY_AT", orderByType = types_1.SortOrder.DESC, page = 1) => {
+const getMangasInLibrary = async (orderBy = "IN_LIBRARY_AT", orderByType = types_1.SortOrder.DESC, page = 1, filters = {}) => {
     const query = `
-    query GetMangas($condition: MangaConditionInput, $orderBy: MangaOrderBy, $orderByType: SortOrder, $offset: Int, $limit: Int) {
-      mangas(condition: $condition, orderBy: $orderBy, orderByType: $orderByType, offset: $offset, first: $limit) {
+    query GetMangas($condition: MangaConditionInput, $filter: MangaFilterInput, $orderBy: MangaOrderBy, $orderByType: SortOrder, $offset: Int, $limit: Int) {
+      mangas(condition: $condition, filter: $filter, orderBy: $orderBy, orderByType: $orderByType, offset: $offset, first: $limit) {
         nodes {
           id
           title
@@ -58,10 +58,19 @@ const getMangasInLibrary = async (orderBy = "IN_LIBRARY_AT", orderByType = types
       }
     }
   `;
+    // Build filter object for GraphQL
+    const filterObj = {};
+    // Handle manga status filter
+    if (filters.status && filters.status.length > 0) {
+        filterObj.status = {
+            in: filters.status,
+        };
+    }
     const variables = {
         condition: {
             inLibrary: true,
         },
+        filter: Object.keys(filterObj).length > 0 ? filterObj : undefined,
         orderBy,
         orderByType,
         offset: (page - 1) * utils_1.RESULT_COUNT,
@@ -198,7 +207,7 @@ exports.getChapterPages = getChapterPages;
 /**
  * Search mangas
  */
-const searchMangas = async (query, page = 1) => {
+const searchMangas = async (query, page = 1, filters = {}) => {
     const gqlQuery = `
     query SearchMangas($condition: MangaConditionInput, $filter: MangaFilterInput, $offset: Int, $limit: Int) {
       mangas(condition: $condition, filter: $filter, offset: $offset, first: $limit) {
@@ -219,15 +228,23 @@ const searchMangas = async (query, page = 1) => {
       }
     }
   `;
+    // Build filter object for GraphQL
+    const filterObj = {
+        title: {
+            like: `%${query}%`,
+        },
+    };
+    // Handle manga status filter
+    if (filters.status && filters.status.length > 0) {
+        filterObj.status = {
+            in: filters.status,
+        };
+    }
     const variables = {
         condition: {
             inLibrary: true,
         },
-        filter: {
-            title: {
-                like: `%${query}%`,
-            },
-        },
+        filter: filterObj,
         offset: (page - 1) * utils_1.RESULT_COUNT,
         limit: utils_1.RESULT_COUNT,
     };
@@ -424,12 +441,13 @@ async function fetchDirectory(request) {
     }
     const sort = (0, utils_1.convertSort)(request.sort?.id) ?? utils_1.Sort.DateAdded;
     const orderByType = request.sort?.ascending ? types_1.SortOrder.ASC : types_1.SortOrder.DESC;
+    const filters = request.filters ?? {};
     let mangas;
     if (request.query) {
-        mangas = await (0, api_1.searchMangas)(request.query, request.page);
+        mangas = await (0, api_1.searchMangas)(request.query, request.page, filters);
     }
     else {
-        mangas = await (0, api_1.getMangasInLibrary)(sort, orderByType, request.page);
+        mangas = await (0, api_1.getMangasInLibrary)(sort, orderByType, request.page, filters);
     }
     const results = mangas.map((v) => (0, utils_1.mangaToTile)(v, host));
     return {
