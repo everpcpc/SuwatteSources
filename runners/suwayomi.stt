@@ -545,6 +545,7 @@ const daisuke_1 = require("@suwatte/daisuke");
 const store_1 = require("../store");
 exports.SuwayomiPreferenceProvider = {
     getPreferenceMenu: async function () {
+        const hasCredentials = !!(await store_1.SuwayomiStore.credentials());
         return {
             sections: [
                 {
@@ -559,6 +560,40 @@ exports.SuwayomiPreferenceProvider = {
                                 await store_1.SuwayomiStore.setHost(value);
                             },
                         }),
+                    ],
+                },
+                {
+                    header: "Authentication (Optional)",
+                    footer: hasCredentials
+                        ? "Credentials are configured"
+                        : "Only required if your Suwayomi server uses authentication",
+                    children: [
+                        (0, daisuke_1.UIButton)({
+                            id: "set_credentials",
+                            title: hasCredentials ? "Update Credentials" : "Set Credentials",
+                            async action() {
+                                const username = await ObjectStore.string("temp_username");
+                                const password = await ObjectStore.string("temp_password");
+                                if (username && password) {
+                                    const credentials = btoa(`${username}:${password}`);
+                                    await store_1.SuwayomiStore.setCredentials(credentials);
+                                    await ObjectStore.remove("temp_username");
+                                    await ObjectStore.remove("temp_password");
+                                }
+                            },
+                        }),
+                        ...(hasCredentials
+                            ? [
+                                (0, daisuke_1.UIButton)({
+                                    id: "clear_credentials",
+                                    title: "Clear Credentials",
+                                    isDestructive: true,
+                                    async action() {
+                                        await store_1.SuwayomiStore.setCredentials("");
+                                    },
+                                }),
+                            ]
+                            : []),
                     ],
                 },
             ],
