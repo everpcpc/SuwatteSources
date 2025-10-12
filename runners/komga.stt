@@ -225,7 +225,7 @@ async function request(req) {
             return res;
         },
     });
-    if (!data)
+    if (!data || data.length === 0)
         return {};
     const object = JSON.parse(data);
     return object;
@@ -234,6 +234,8 @@ exports.request = request;
 const simpleReq = async (req) => {
     const client = new NetworkClient();
     const { data } = await client.request(req);
+    if (!data || data.length === 0)
+        return {};
     const object = JSON.parse(data);
     return object;
 };

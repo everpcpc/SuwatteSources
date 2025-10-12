@@ -279,7 +279,7 @@ async function graphqlRequest(query, variables) {
     if (credentials) {
         headers.Authorization = `Basic ${credentials}`;
     }
-    const { data } = await client.request({
+    const response = await client.request({
         url: `${host}/api/graphql`,
         method: "POST",
         headers,
@@ -295,20 +295,55 @@ async function graphqlRequest(query, variables) {
             return res;
         },
     });
-    if (!data)
-        return {};
-    const response = JSON.parse(data);
-    if (response.errors) {
-        throw new Error(response.errors[0]?.message || "GraphQL Error");
+    // Check HTTP status code
+    if (response.status < 200 || response.status >= 300) {
+        console.error(`GraphQL request failed with status ${response.status}`);
+        console.error(`Response data: ${response.data}`);
+        throw new Error(`HTTP ${response.status}: Failed to fetch data from Suwayomi server`);
     }
-    return response.data;
+    // Check if response data is empty
+    if (!response.data || response.data.length === 0) {
+        console.warn("Received empty response from GraphQL server");
+        return {};
+    }
+    let parsedResponse;
+    try {
+        parsedResponse = JSON.parse(response.data);
+    }
+    catch (error) {
+        console.error(`Failed to parse GraphQL response: ${error}`);
+        console.error(`Response data: ${response.data}`);
+        throw new Error("Failed to parse server response");
+    }
+    if (parsedResponse.errors) {
+        console.error("GraphQL errors:", parsedResponse.errors);
+        throw new Error(parsedResponse.errors[0]?.message || "GraphQL Error");
+    }
+    return parsedResponse.data;
 }
 exports.graphqlRequest = graphqlRequest;
 const simpleReq = async (req) => {
     const client = new NetworkClient();
-    const { data } = await client.request(req);
-    const object = JSON.parse(data);
-    return object;
+    const response = await client.request(req);
+    // Check HTTP status code
+    if (response.status < 200 || response.status >= 300) {
+        console.error(`Request failed with status ${response.status}`);
+        console.error(`Response data: ${response.data}`);
+        throw new Error(`HTTP ${response.status}: Request failed`);
+    }
+    if (!response.data || response.data.length === 0) {
+        console.warn("Received empty response");
+        return {};
+    }
+    try {
+        const object = JSON.parse(response.data);
+        return object;
+    }
+    catch (error) {
+        console.error(`Failed to parse response: ${error}`);
+        console.error(`Response data: ${response.data}`);
+        throw new Error("Failed to parse server response");
+    }
 };
 exports.simpleReq = simpleReq;
 
@@ -602,7 +637,6 @@ const store_1 = require("../store");
 const api_1 = require("../api");
 exports.SuwayomiSetupProvider = {
     getSetupMenu: async function () {
-        const hasCredentials = !!(await store_1.SuwayomiStore.credentials());
         return {
             sections: [
                 {
@@ -614,40 +648,6 @@ exports.SuwayomiSetupProvider = {
                             value: (await store_1.SuwayomiStore.host()) ?? "",
                             placeholder: "http://localhost:4567",
                         }),
-                    ],
-                },
-                {
-                    header: "Authentication (Optional)",
-                    footer: hasCredentials
-                        ? "Credentials are configured"
-                        : "Only required if your Suwayomi server uses authentication",
-                    children: [
-                        (0, daisuke_1.UIButton)({
-                            id: "set_credentials",
-                            title: hasCredentials ? "Update Credentials" : "Set Credentials",
-                            async action() {
-                                const username = await ObjectStore.string("temp_username");
-                                const password = await ObjectStore.string("temp_password");
-                                if (username && password) {
-                                    const credentials = btoa(`${username}:${password}`);
-                                    await store_1.SuwayomiStore.setCredentials(credentials);
-                                    await ObjectStore.remove("temp_username");
-                                    await ObjectStore.remove("temp_password");
-                                }
-                            },
-                        }),
-                        ...(hasCredentials
-                            ? [
-                                (0, daisuke_1.UIButton)({
-                                    id: "clear_credentials",
-                                    title: "Clear Credentials",
-                                    isDestructive: true,
-                                    async action() {
-                                        await store_1.SuwayomiStore.setCredentials("");
-                                    },
-                                }),
-                            ]
-                            : []),
                     ],
                 },
             ],
