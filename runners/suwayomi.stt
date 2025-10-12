@@ -295,6 +295,9 @@ async function graphqlRequest(query, variables) {
             return res;
         },
     });
+    console.log("--> graphql response: %s", response);
+    console.log("--> graphql response status: %s", response.status);
+    console.log("--> graphql response data: %s", response.data);
     // Check HTTP status code
     if (response.status < 200 || response.status >= 300) {
         console.error(`GraphQL request failed with status ${response.status}`);
