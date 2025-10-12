@@ -541,67 +541,15 @@ exports.SuwayomiPageProvider = {
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.SuwayomiPreferenceProvider = void 0;
-const daisuke_1 = require("@suwatte/daisuke");
-const store_1 = require("../store");
 exports.SuwayomiPreferenceProvider = {
     getPreferenceMenu: async function () {
-        const hasCredentials = !!(await store_1.SuwayomiStore.credentials());
         return {
-            sections: [
-                {
-                    header: "Server Configuration",
-                    children: [
-                        (0, daisuke_1.UITextField)({
-                            id: "server_url",
-                            title: "Server URL",
-                            value: (await store_1.SuwayomiStore.host()) ?? "",
-                            placeholder: "http://localhost:4567",
-                            async didChange(value) {
-                                await store_1.SuwayomiStore.setHost(value);
-                            },
-                        }),
-                    ],
-                },
-                {
-                    header: "Authentication (Optional)",
-                    footer: hasCredentials
-                        ? "Credentials are configured"
-                        : "Only required if your Suwayomi server uses authentication",
-                    children: [
-                        (0, daisuke_1.UIButton)({
-                            id: "set_credentials",
-                            title: hasCredentials ? "Update Credentials" : "Set Credentials",
-                            async action() {
-                                const username = await ObjectStore.string("temp_username");
-                                const password = await ObjectStore.string("temp_password");
-                                if (username && password) {
-                                    const credentials = btoa(`${username}:${password}`);
-                                    await store_1.SuwayomiStore.setCredentials(credentials);
-                                    await ObjectStore.remove("temp_username");
-                                    await ObjectStore.remove("temp_password");
-                                }
-                            },
-                        }),
-                        ...(hasCredentials
-                            ? [
-                                (0, daisuke_1.UIButton)({
-                                    id: "clear_credentials",
-                                    title: "Clear Credentials",
-                                    isDestructive: true,
-                                    async action() {
-                                        await store_1.SuwayomiStore.setCredentials("");
-                                    },
-                                }),
-                            ]
-                            : []),
-                    ],
-                },
-            ],
+            sections: [],
         };
     },
 };
 
-},{"../store":15,"@suwatte/daisuke":20}],12:[function(require,module,exports){
+},{}],12:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.SuwayomiProgressProvider = void 0;
@@ -649,21 +597,87 @@ exports.SuwayomiProgressProvider = {
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.SuwayomiSetupProvider = void 0;
+const daisuke_1 = require("@suwatte/daisuke");
+const store_1 = require("../store");
 const api_1 = require("../api");
 exports.SuwayomiSetupProvider = {
-    setup: async () => {
+    getSetupMenu: async function () {
+        const hasCredentials = !!(await store_1.SuwayomiStore.credentials());
+        return {
+            sections: [
+                {
+                    header: "Server URL",
+                    children: [
+                        (0, daisuke_1.UITextField)({
+                            id: "host",
+                            title: "Server URL",
+                            value: (await store_1.SuwayomiStore.host()) ?? "",
+                            placeholder: "http://localhost:4567",
+                        }),
+                    ],
+                },
+                {
+                    header: "Authentication (Optional)",
+                    footer: hasCredentials
+                        ? "Credentials are configured"
+                        : "Only required if your Suwayomi server uses authentication",
+                    children: [
+                        (0, daisuke_1.UIButton)({
+                            id: "set_credentials",
+                            title: hasCredentials ? "Update Credentials" : "Set Credentials",
+                            async action() {
+                                const username = await ObjectStore.string("temp_username");
+                                const password = await ObjectStore.string("temp_password");
+                                if (username && password) {
+                                    const credentials = btoa(`${username}:${password}`);
+                                    await store_1.SuwayomiStore.setCredentials(credentials);
+                                    await ObjectStore.remove("temp_username");
+                                    await ObjectStore.remove("temp_password");
+                                }
+                            },
+                        }),
+                        ...(hasCredentials
+                            ? [
+                                (0, daisuke_1.UIButton)({
+                                    id: "clear_credentials",
+                                    title: "Clear Credentials",
+                                    isDestructive: true,
+                                    async action() {
+                                        await store_1.SuwayomiStore.setCredentials("");
+                                    },
+                                }),
+                            ]
+                            : []),
+                    ],
+                },
+            ],
+        };
+    },
+    validateSetupForm: async function ({ host: value, }) {
+        let url = value.trim();
+        if (!url.startsWith("http://") && !url.startsWith("https://")) {
+            url = `http://${url}`;
+        }
+        if (url.endsWith("/")) {
+            url = url.slice(0, -1);
+        }
+        await ObjectStore.set("host", url);
         try {
             await (0, api_1.healthCheck)();
-            console.log("Suwayomi: Setup completed successfully");
         }
         catch (error) {
-            console.log("Suwayomi: Setup failed - " + error);
-            throw error;
+            console.error(`${error}`);
+            throw new Error("Cannot Connect to Suwayomi Server");
         }
+    },
+    isRunnerSetup: async function () {
+        return {
+            state: !!(await store_1.SuwayomiStore.host()),
+        };
     },
 };
 
-},{"../api":2}],14:[function(require,module,exports){
+},{"../api":2,"../store":15,"@suwatte/daisuke":20}],14:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Target = void 0;
@@ -691,7 +705,7 @@ const config = {
     disableTrackerLinking: true,
     disableUpdateChecks: true,
     allowsMultipleInstances: true,
-    requiresAuthenticationToAccessContent: true,
+    requiresAuthenticationToAccessContent: false, // Authentication is optional for Suwayomi
 };
 exports.Target = {
     info,
