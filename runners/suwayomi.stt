@@ -377,7 +377,7 @@ async function fetchDirectory(request) {
     else {
         mangas = await (0, api_1.getMangasInLibrary)(sort, orderByType, request.page);
     }
-    const results = mangas.map((v) => (0, utils_1.mangaToTile)(v, host, true));
+    const results = mangas.map((v) => (0, utils_1.mangaToTile)(v, host));
     return {
         results,
         isLastPage: results.length < utils_1.RESULT_COUNT,
@@ -755,7 +755,7 @@ const genURL = async (url) => {
     return val;
 };
 exports.genURL = genURL;
-const mangaToTile = (manga, host, asRequest) => {
+const mangaToTile = (manga, host) => {
     const cover = manga.thumbnailUrl
         ? `${host}/api/v1/manga/${manga.id}/thumbnail?fetchedAt=${Date.now()}`
         : "";
@@ -769,17 +769,6 @@ const mangaToTile = (manga, host, asRequest) => {
             badge: {
                 color: "#0096FF",
                 count: manga.unreadCount,
-            },
-        }),
-        ...(asRequest && {
-            link: {
-                request: {
-                    configID: "manga",
-                    page: 1,
-                    context: {
-                        mangaId: manga.id.toString(),
-                    },
-                },
             },
         }),
     };
