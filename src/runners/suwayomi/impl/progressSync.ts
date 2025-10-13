@@ -16,6 +16,7 @@ export const SuwayomiProgressProvider: ProgressSyncHandler = {
               isRead
               lastPageRead
               lastReadAt
+              pageCount
             }
           }
         }
@@ -36,20 +37,21 @@ export const SuwayomiProgressProvider: ProgressSyncHandler = {
     }
 
     const lastReadAt = parseInt(lastReadChapter.lastReadAt);
-    if (isNaN(lastReadAt)) {
+    if (!lastReadAt) {
       return { readChapterIds };
     }
     const readDate = new Date(lastReadAt * 1000);
+    const progress =
+      Math.round(
+        (lastReadChapter.lastPageRead / lastReadChapter.pageCount) * 100
+      ) / 100;
     return {
       readChapterIds,
       currentReadingState: {
         chapterId: lastReadChapter.id.toString(),
         page: lastReadChapter.lastPageRead,
         readDate,
-        progress:
-          Math.round(
-            (lastReadChapter.lastPageRead / lastReadChapter.pageCount) * 100
-          ) / 100,
+        progress,
       },
     };
   },
