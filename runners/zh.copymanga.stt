@@ -163,66 +163,63 @@ class Target {
         console.log(`GET: ${url}`);
         const headers = await (0, utils_1.getRequestHeaders)();
         const response = await this.client.get(url, { headers });
-        const data = JSON.parse(response.data);
-        if (data.code !== 200) {
-            throw new Error(`Failed to fetch manga details: ${data.message}`);
+        // Parse HTML to extract manga details
+        const titleMatch = response.data.match(/<h6[^>]*>([^<]+)<\/h6>/);
+        const title = titleMatch ? titleMatch[1].trim() : "";
+        const coverMatch = response.data.match(/img[^>]*data-src="([^"]+)"/);
+        const cover = coverMatch ? coverMatch[1].replace(".328x422.jpg", "") : "";
+        // Extract authors from span.comicParticulars-right-txt > a
+        const authorsMatch = response.data.match(/<span class="comicParticulars-right-txt">([\s\S]*?)<\/span>/);
+        const creators = [];
+        if (authorsMatch) {
+            const authorLinks = authorsMatch[1].match(/<a[^>]*>([^<]+)<\/a>/g) || [];
+            authorLinks.forEach((link) => {
+                const nameMatch = link.match(/>([^<]+)</);
+                if (nameMatch)
+                    creators.push(nameMatch[1].trim());
+            });
         }
-        if (!data.results) {
-            throw new Error(`Empty manga details: ${data.message}`);
-        }
-        const results = data.results;
-        const info = [];
-        const comic = results.comic;
-        const cover = comic.cover ? comic.cover.replace(".328x422.jpg", "") : "";
-        const title = comic.name || "";
-        const additionalTitles = comic.alias
-            ? comic.alias.split(",").map((alias) => alias.trim())
-            : [];
-        const creators = comic.author
-            ? comic.author.map((author) => author.name)
-            : [];
-        const summary = comic.brief || "";
-        const status = (0, utils_1.convertStatus)(comic.status.value);
-        if (comic.popular) {
-            info.push(`🔥熱度: ${comic.popular}`);
-        }
-        if (comic.datetime_updated) {
-            info.push(`🗓最後更新: ${comic.datetime_updated}`);
-        }
-        const region = (0, utils_1.convertRegion)(comic.region.value);
-        info.push((0, utils_1.regionToDisplay)(region));
-        info.push(comic.reclass.display);
-        const recommendedPanelMode = (0, utils_1.readingModeByRegion)(region);
+        // Extract summary
+        const summaryMatch = response.data.match(/<p class="intro"[^>]*>([^<]*)<\/p>/);
+        const summary = summaryMatch ? summaryMatch[1].trim() : "";
+        // Extract tags
+        const tagsMatch = response.data.match(/<span class="comicParticulars-tag">([\s\S]*?)<\/span>/);
         const themes = [];
-        if (comic.theme) {
-            comic.theme.forEach((theme) => {
-                if (theme.name) {
-                    themes.push({
-                        id: theme.path_word || theme.name,
-                        title: theme.name,
-                    });
+        if (tagsMatch) {
+            const tagLinks = tagsMatch[1].match(/<a[^>]*>([^<]+)<\/a>/g) || [];
+            tagLinks.forEach((link) => {
+                const tagMatch = link.match(/>([^<]+)</);
+                if (tagMatch) {
+                    const tag = tagMatch[1].trim().replace(/^#/, "");
+                    themes.push({ id: tag, title: tag });
                 }
             });
         }
-        const isNSFW = comic.restrict.value === 0 ? false : true;
+        // Extract status
+        const statusMatch = response.data.match(/狀態：<\/li>[\s\S]*?<span class="comicParticulars-right-txt"[^>]*>([^<]+)<\/span>/);
+        let status = daisuke_1.PublicationStatus.ONGOING;
+        if (statusMatch) {
+            const statusText = statusMatch[1].trim();
+            if (statusText === "已完結" || statusText === "短篇") {
+                status = daisuke_1.PublicationStatus.COMPLETED;
+            }
+        }
         return {
             title,
-            additionalTitles,
-            recommendedPanelMode,
             cover,
             creators,
             summary,
             status,
-            info,
             webUrl: `${baseUrl}/comic/${contentId}`,
-            isNSFW,
-            properties: [
-                {
-                    id: "theme",
-                    title: "題材",
-                    tags: themes,
-                },
-            ],
+            properties: themes.length > 0
+                ? [
+                    {
+                        id: "theme",
+                        title: "題材",
+                        tags: themes,
+                    },
+                ]
+                : [],
         };
     }
     // Get chapter list for a manga
@@ -243,7 +240,7 @@ class Target {
         const decryptionKey = keyMatch[1];
         // Now get the chapter list
         const url = await (0, utils_1.generateChapterListUrl)(contentId);
-        console.log(`GET: ${url}`);
+        console.info(`GET: ${url}`);
         const headers = await (0, utils_1.getRequestHeaders)({ includesDnts: true });
         const response = await this.client.get(url, { headers });
         const resultsMatch = response.data.match(/"results":"([^"]+)"/);
@@ -267,12 +264,20 @@ class Target {
         const headers = await (0, utils_1.getRequestHeaders)();
         console.log(`GET: ${url}`);
         const response = await this.client.get(url, { headers });
-        const data = JSON.parse(response.data);
-        if (!data.results || !data.results.chapter) {
-            return { pages: [] };
+        // Extract the decryption key from script tag (same as in getChapters)
+        const keyMatch = response.data.match(/var\s+\w+\s*=\s*'([^']+)'/);
+        if (!keyMatch || !keyMatch[1]) {
+            throw new Error("Failed to extract decryption key from chapter page");
         }
-        const chapter = data.results.chapter;
-        const pageList = chapter.contents || [];
+        const key = keyMatch[1];
+        // Extract encrypted contentKey from script
+        const contentKeyMatch = response.data.match(/var contentKey = '([^']+)'/);
+        if (!contentKeyMatch || !contentKeyMatch[1]) {
+            throw new Error("Failed to extract encrypted content key");
+        }
+        const encryptedContentKey = contentKeyMatch[1];
+        const decryptedContent = (0, utils_1.decryptString)(encryptedContentKey, key);
+        const pageList = JSON.parse(decryptedContent);
         const pages = pageList.map((page, index) => ({
             index,
             url: page.url,
@@ -298,7 +303,7 @@ class Target {
     async search(query, page) {
         const url = await (0, utils_1.generateSearchUrl)(query, page);
         const headers = await (0, utils_1.getRequestHeaders)();
-        console.log(`GET: ${url}`);
+        console.info(`GET: ${url}`);
         const response = await this.client.get(url, { headers });
         const data = JSON.parse(response.data);
         if (!data.results || !data.results.list) {
@@ -320,12 +325,20 @@ class Target {
         const headers = await (0, utils_1.getRequestHeaders)();
         console.log(`GET: ${url}`);
         const response = await this.client.get(url, { headers });
-        const data = JSON.parse(response.data);
-        if (!data.results || !data.results.list) {
+        // Parse HTML to extract manga list from div.exemptComic-box[list] attribute
+        const listMatch = response.data.match(/class="row exemptComic-box"[^>]*list="([^"]+)"/);
+        if (!listMatch || !listMatch[1]) {
             return { results: [], isLastPage: true };
         }
-        const mangaList = data.results.list;
-        const hasMore = (0, utils_1.hasMorePages)(data.results);
+        // Decode HTML entities and convert single quotes to double quotes
+        const listJson = listMatch[1]
+            .replace(/&#x27;/g, "'")
+            .replace(/&#39;/g, "'")
+            .replace(/'([^']+)':/g, '"$1":') // Convert keys
+            .replace(/:\s*'([^']*)'/g, ': "$1"'); // Convert string values
+        const mangaList = JSON.parse(listJson);
+        // Check if there's a next page by looking at pagination
+        const hasMore = !response.data.includes('li class="page-all-item active"');
         return (0, utils_1.mangaListToPageResult)(mangaList, hasMore);
     }
     // Get directory config
@@ -413,7 +426,7 @@ class Target {
                 return this.getDirectory({ page });
         }
         const headers = await (0, utils_1.getRequestHeaders)();
-        console.log(`GET: ${url}`);
+        console.info(`GET: ${url}`);
         const response = await this.client.get(url, { headers });
         const data = JSON.parse(response.data);
         if (!data.results || !data.results.list) {
@@ -500,7 +513,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.hasMorePages = exports.generatePageListUrl = exports.generateChapterListUrl = exports.generateMangaDetailsUrl = exports.generateNewestUrl = exports.generateRecsUrl = exports.generateRankUrl = exports.generateSearchUrl = exports.getSearchApiEndpoint = exports.generateExploreUrl = exports.chapterGroupsToChapters = exports.getTimestampFromUuid = exports.parseChapterTitle = exports.readingModeByRegion = exports.regionToDisplay = exports.convertRegion = exports.convertStatus = exports.mangaListToPageResult = exports.mangaToHighlight = exports.parseSearchRequest = exports.decryptString = exports.getRequestHeaders = exports.getApiUrl = exports.getBaseUrl = void 0;
+exports.hasMorePages = exports.generatePageListUrl = exports.generateChapterListUrl = exports.generateMangaDetailsUrl = exports.generateNewestUrl = exports.generateRecsUrl = exports.generateRankUrl = exports.generateSearchUrl = exports.getSearchApiEndpoint = exports.generateExploreUrl = exports.chapterGroupsToChapters = exports.getTimestampFromUuid = exports.parseChapterTitle = exports.readingModeByRegion = exports.regionToDisplay = exports.convertRegion = exports.convertStatus = exports.mangaListToPageResult = exports.mangaToHighlight = exports.parseSearchRequest = exports.decryptString = exports.getRequestHeaders = exports.getBaseUrl = void 0;
 const daisuke_1 = require("@suwatte/daisuke");
 const types_1 = require("./types");
 const constants_1 = require("./constants");
@@ -511,11 +524,6 @@ const getBaseUrl = async () => {
     return `https://www.${domain || constants_1.DOMAINS.China}`;
 };
 exports.getBaseUrl = getBaseUrl;
-const getApiUrl = async () => {
-    const domain = await store_1.ConfigStore.domain();
-    return `https://api.${domain || constants_1.DOMAINS.China}/api/v3`;
-};
-exports.getApiUrl = getApiUrl;
 const getRequestHeaders = async (options = {}) => {
     const baseUrl = await (0, exports.getBaseUrl)();
     const headers = {
@@ -810,8 +818,8 @@ const chapterGroupsToChapters = async (groups, mangaId) => {
 exports.chapterGroupsToChapters = chapterGroupsToChapters;
 // API URL generators
 const generateExploreUrl = async (theme, top, ordering, page) => {
-    const apiUrl = await (0, exports.getApiUrl)();
-    return `${apiUrl}/comics?theme=${theme}&top=${top}&ordering=${ordering}&limit=${constants_1.LIMIT}&offset=${(page - 1) * constants_1.LIMIT}`;
+    const baseUrl = await (0, exports.getBaseUrl)();
+    return `${baseUrl}/comics?theme=${theme}&top=${top}&ordering=${ordering}&limit=${constants_1.LIMIT}&offset=${(page - 1) * constants_1.LIMIT}`;
 };
 exports.generateExploreUrl = generateExploreUrl;
 const getSearchApiEndpoint = async () => {
@@ -834,23 +842,23 @@ const generateSearchUrl = async (query, page) => {
 };
 exports.generateSearchUrl = generateSearchUrl;
 const generateRankUrl = async (dateType, page) => {
-    const apiUrl = await (0, exports.getApiUrl)();
-    return `${apiUrl}/ranks?date_type=${dateType}&limit=${constants_1.LIMIT}&offset=${(page - 1) * constants_1.LIMIT}`;
+    const baseUrl = await (0, exports.getBaseUrl)();
+    return `${baseUrl}/api/v3/ranks?date_type=${dateType}&limit=${constants_1.LIMIT}&offset=${(page - 1) * constants_1.LIMIT}`;
 };
 exports.generateRankUrl = generateRankUrl;
 const generateRecsUrl = async (page) => {
-    const apiUrl = await (0, exports.getApiUrl)();
-    return `${apiUrl}/recs?pos=3200102&limit=${constants_1.LIMIT}&offset=${(page - 1) * constants_1.LIMIT}`;
+    const baseUrl = await (0, exports.getBaseUrl)();
+    return `${baseUrl}/api/v3/recs?pos=3200102&limit=${constants_1.LIMIT}&offset=${(page - 1) * constants_1.LIMIT}`;
 };
 exports.generateRecsUrl = generateRecsUrl;
 const generateNewestUrl = async (page) => {
-    const apiUrl = await (0, exports.getApiUrl)();
-    return `${apiUrl}/update/newest?limit=${constants_1.LIMIT}&offset=${(page - 1) * constants_1.LIMIT}`;
+    const baseUrl = await (0, exports.getBaseUrl)();
+    return `${baseUrl}/api/v3/update/newest?limit=${constants_1.LIMIT}&offset=${(page - 1) * constants_1.LIMIT}`;
 };
 exports.generateNewestUrl = generateNewestUrl;
 const generateMangaDetailsUrl = async (id) => {
-    const apiUrl = await (0, exports.getApiUrl)();
-    return `${apiUrl}/comic2/${id}`;
+    const baseUrl = await (0, exports.getBaseUrl)();
+    return `${baseUrl}/comic/${id}`;
 };
 exports.generateMangaDetailsUrl = generateMangaDetailsUrl;
 const generateChapterListUrl = async (id) => {
@@ -859,8 +867,8 @@ const generateChapterListUrl = async (id) => {
 };
 exports.generateChapterListUrl = generateChapterListUrl;
 const generatePageListUrl = async (mangaId, chapterId) => {
-    const apiUrl = await (0, exports.getApiUrl)();
-    return `${apiUrl}/comic/${mangaId}/chapter/${chapterId}`;
+    const baseUrl = await (0, exports.getBaseUrl)();
+    return `${baseUrl}/comic/${mangaId}/chapter/${chapterId}`;
 };
 exports.generatePageListUrl = generatePageListUrl;
 // Check if the API response has more pages
