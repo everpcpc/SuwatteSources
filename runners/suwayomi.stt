@@ -573,7 +573,8 @@ exports.SuwayomiProgressProvider = {
             return { readChapterIds };
         }
         const readDate = new Date(lastReadAt * 1000);
-        const progress = Math.round((lastReadChapter.lastPageRead / lastReadChapter.pageCount) * 100) / 100;
+        const pageCount = lastReadChapter.pageCount > 0 ? lastReadChapter.pageCount : 1;
+        const progress = Math.round((lastReadChapter.lastPageRead / pageCount) * 100) / 100;
         return {
             readChapterIds,
             currentReadingState: {
@@ -653,7 +654,7 @@ const impl_1 = require("./impl");
 const info = {
     id: "org.suwayomi",
     name: "Suwayomi",
-    version: 1.0,
+    version: 1.1,
     minSupportedAppVersion: "6.0.0",
     thumbnail: "suwayomi.png",
     website: "https://github.com/Suwayomi",
@@ -878,6 +879,7 @@ const mangaToContent = async (manga) => {
         ? `${host}/api/v1/manga/${manga.id}/thumbnail?fetchedAt=${Date.now()}`
         : "";
     const info = [];
+    const creators = [];
     if (manga.unreadCount === 0 && (manga.chapters?.totalCount ?? 0) > 0) {
         info.push("Finished");
     }
@@ -888,13 +890,14 @@ const mangaToContent = async (manga) => {
         info.push("Reading");
     }
     if (manga.author) {
-        info.push(manga.author);
+        creators.push(manga.author);
     }
     if (manga.genre && manga.genre.length > 0) {
-        info.push(...manga.genre);
+        info.push(...manga.genre.filter((genre) => genre !== ""));
     }
     return {
         title: manga.title,
+        creators,
         cover,
         status: convertStatus(manga.status),
         info,
