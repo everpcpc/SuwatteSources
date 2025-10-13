@@ -10,6 +10,7 @@ import {
   NetworkRequest,
   PagedResult,
   Property,
+  PublicationStatus,
   RunnerInfo,
   CatalogRating,
   Tag,
@@ -23,16 +24,9 @@ import {
   SORT_OPTIONS,
   getProperties,
 } from "./constants";
-import {
-  ChapterListResponse,
-  MangaDetailResponse,
-  SearchParams,
-  ListingResponse,
-} from "./types";
+import { ChapterListResponse, SearchParams, ListingResponse } from "./types";
 import {
   chapterGroupsToChapters,
-  convertRegion,
-  convertStatus,
   decryptString,
   generateChapterListUrl,
   generateExploreUrl,
@@ -47,8 +41,6 @@ import {
   hasMorePages,
   mangaListToPageResult,
   parseSearchRequest,
-  readingModeByRegion,
-  regionToDisplay,
 } from "./utils";
 import { ConfigStore } from "./store";
 
@@ -77,74 +69,78 @@ export class Target
     console.log(`GET: ${url}`);
     const headers = await getRequestHeaders();
     const response = await this.client.get(url, { headers });
-    const data = JSON.parse(response.data) as MangaDetailResponse;
 
-    if (data.code !== 200) {
-      throw new Error(`Failed to fetch manga details: ${data.message}`);
+    // Parse HTML to extract manga details
+    const titleMatch = response.data.match(/<h6[^>]*>([^<]+)<\/h6>/);
+    const title = titleMatch ? titleMatch[1].trim() : "";
+
+    const coverMatch = response.data.match(/img[^>]*data-src="([^"]+)"/);
+    const cover = coverMatch ? coverMatch[1].replace(".328x422.jpg", "") : "";
+
+    // Extract authors from span.comicParticulars-right-txt > a
+    const authorsMatch = response.data.match(
+      /<span class="comicParticulars-right-txt">([\s\S]*?)<\/span>/
+    );
+    const creators: string[] = [];
+    if (authorsMatch) {
+      const authorLinks = authorsMatch[1].match(/<a[^>]*>([^<]+)<\/a>/g) || [];
+      authorLinks.forEach((link) => {
+        const nameMatch = link.match(/>([^<]+)</);
+        if (nameMatch) creators.push(nameMatch[1].trim());
+      });
     }
-    if (!data.results) {
-      throw new Error(`Empty manga details: ${data.message}`);
-    }
-    const results = data.results;
 
-    const info: string[] = [];
+    // Extract summary
+    const summaryMatch = response.data.match(
+      /<p class="intro"[^>]*>([^<]*)<\/p>/
+    );
+    const summary = summaryMatch ? summaryMatch[1].trim() : "";
 
-    const comic = results.comic;
-    const cover = comic.cover ? comic.cover.replace(".328x422.jpg", "") : "";
-    const title = comic.name || "";
-    const additionalTitles = comic.alias
-      ? comic.alias.split(",").map((alias: string) => alias.trim())
-      : [];
-    const creators = comic.author
-      ? comic.author.map((author) => author.name)
-      : [];
-
-    const summary = comic.brief || "";
-    const status = convertStatus(comic.status.value);
-
-    if (comic.popular) {
-      info.push(`🔥熱度: ${comic.popular}`);
-    }
-    if (comic.datetime_updated) {
-      info.push(`🗓最後更新: ${comic.datetime_updated}`);
-    }
-    const region = convertRegion(comic.region.value);
-    info.push(regionToDisplay(region));
-    info.push(comic.reclass.display);
-
-    const recommendedPanelMode = readingModeByRegion(region);
-
+    // Extract tags
+    const tagsMatch = response.data.match(
+      /<span class="comicParticulars-tag">([\s\S]*?)<\/span>/
+    );
     const themes: Tag[] = [];
-    if (comic.theme) {
-      comic.theme.forEach((theme: any) => {
-        if (theme.name) {
-          themes.push({
-            id: theme.path_word || theme.name,
-            title: theme.name,
-          });
+    if (tagsMatch) {
+      const tagLinks = tagsMatch[1].match(/<a[^>]*>([^<]+)<\/a>/g) || [];
+      tagLinks.forEach((link) => {
+        const tagMatch = link.match(/>([^<]+)</);
+        if (tagMatch) {
+          const tag = tagMatch[1].trim().replace(/^#/, "");
+          themes.push({ id: tag, title: tag });
         }
       });
     }
-    const isNSFW = comic.restrict.value === 0 ? false : true;
+
+    // Extract status
+    const statusMatch = response.data.match(
+      /狀態：<\/li>[\s\S]*?<span class="comicParticulars-right-txt"[^>]*>([^<]+)<\/span>/
+    );
+    let status = PublicationStatus.ONGOING;
+    if (statusMatch) {
+      const statusText = statusMatch[1].trim();
+      if (statusText === "已完結" || statusText === "短篇") {
+        status = PublicationStatus.COMPLETED;
+      }
+    }
 
     return {
       title,
-      additionalTitles,
-      recommendedPanelMode,
       cover,
       creators,
       summary,
       status,
-      info,
       webUrl: `${baseUrl}/comic/${contentId}`,
-      isNSFW,
-      properties: [
-        {
-          id: "theme",
-          title: "題材",
-          tags: themes,
-        },
-      ],
+      properties:
+        themes.length > 0
+          ? [
+              {
+                id: "theme",
+                title: "題材",
+                tags: themes,
+              },
+            ]
+          : [],
     };
   }
 
@@ -168,7 +164,7 @@ export class Target
 
     // Now get the chapter list
     const url = await generateChapterListUrl(contentId);
-    console.log(`GET: ${url}`);
+    console.info(`GET: ${url}`);
     const headers = await getRequestHeaders({ includesDnts: true });
     const response = await this.client.get(url, { headers });
 
@@ -200,14 +196,24 @@ export class Target
     const headers = await getRequestHeaders();
     console.log(`GET: ${url}`);
     const response = await this.client.get(url, { headers });
-    const data = JSON.parse(response.data);
 
-    if (!data.results || !data.results.chapter) {
-      return { pages: [] };
+    // Extract the decryption key from script tag (same as in getChapters)
+    const keyMatch = response.data.match(/var\s+\w+\s*=\s*'([^']+)'/);
+    if (!keyMatch || !keyMatch[1]) {
+      throw new Error("Failed to extract decryption key from chapter page");
+    }
+    const key = keyMatch[1];
+
+    // Extract encrypted contentKey from script
+    const contentKeyMatch = response.data.match(/var contentKey = '([^']+)'/);
+    if (!contentKeyMatch || !contentKeyMatch[1]) {
+      throw new Error("Failed to extract encrypted content key");
     }
 
-    const chapter = data.results.chapter;
-    const pageList = chapter.contents || [];
+    const encryptedContentKey = contentKeyMatch[1];
+    const decryptedContent = decryptString(encryptedContentKey, key);
+
+    const pageList = JSON.parse(decryptedContent);
 
     const pages = pageList.map((page: any, index: number) => ({
       index,
@@ -241,7 +247,7 @@ export class Target
   private async search(query: string, page: number): Promise<PagedResult> {
     const url = await generateSearchUrl(query, page);
     const headers = await getRequestHeaders();
-    console.log(`GET: ${url}`);
+    console.info(`GET: ${url}`);
     const response = await this.client.get(url, { headers });
     const data = JSON.parse(response.data);
 
@@ -268,14 +274,26 @@ export class Target
     const headers = await getRequestHeaders();
     console.log(`GET: ${url}`);
     const response = await this.client.get(url, { headers });
-    const data = JSON.parse(response.data);
 
-    if (!data.results || !data.results.list) {
+    // Parse HTML to extract manga list from div.exemptComic-box[list] attribute
+    const listMatch = response.data.match(
+      /class="row exemptComic-box"[^>]*list="([^"]+)"/
+    );
+    if (!listMatch || !listMatch[1]) {
       return { results: [], isLastPage: true };
     }
 
-    const mangaList = data.results.list;
-    const hasMore = hasMorePages(data.results);
+    // Decode HTML entities and convert single quotes to double quotes
+    const listJson = listMatch[1]
+      .replace(/&#x27;/g, "'")
+      .replace(/&#39;/g, "'")
+      .replace(/'([^']+)':/g, '"$1":') // Convert keys
+      .replace(/:\s*'([^']*)'/g, ': "$1"'); // Convert string values
+
+    const mangaList = JSON.parse(listJson);
+
+    // Check if there's a next page by looking at pagination
+    const hasMore = !response.data.includes('li class="page-all-item active"');
 
     return mangaListToPageResult(mangaList, hasMore);
   }
@@ -368,7 +386,7 @@ export class Target
     }
 
     const headers = await getRequestHeaders();
-    console.log(`GET: ${url}`);
+    console.info(`GET: ${url}`);
     const response = await this.client.get(url, { headers });
     const data = JSON.parse(response.data) as ListingResponse;
 

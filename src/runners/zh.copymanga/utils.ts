@@ -23,11 +23,6 @@ export const getBaseUrl = async (): Promise<string> => {
   return `https://www.${domain || DOMAINS.China}`;
 };
 
-export const getApiUrl = async (): Promise<string> => {
-  const domain = await ConfigStore.domain();
-  return `https://api.${domain || DOMAINS.China}/api/v3`;
-};
-
 export const getRequestHeaders = async (
   options: { includesDnts?: boolean } = {}
 ): Promise<Record<string, string>> => {
@@ -373,8 +368,8 @@ export const generateExploreUrl = async (
   ordering: string,
   page: number
 ): Promise<string> => {
-  const apiUrl = await getApiUrl();
-  return `${apiUrl}/comics?theme=${theme}&top=${top}&ordering=${ordering}&limit=${LIMIT}&offset=${
+  const baseUrl = await getBaseUrl();
+  return `${baseUrl}/comics?theme=${theme}&top=${top}&ordering=${ordering}&limit=${LIMIT}&offset=${
     (page - 1) * LIMIT
   }`;
 };
@@ -410,27 +405,29 @@ export const generateRankUrl = async (
   dateType: string,
   page: number
 ): Promise<string> => {
-  const apiUrl = await getApiUrl();
-  return `${apiUrl}/ranks?date_type=${dateType}&limit=${LIMIT}&offset=${
+  const baseUrl = await getBaseUrl();
+  return `${baseUrl}/api/v3/ranks?date_type=${dateType}&limit=${LIMIT}&offset=${
     (page - 1) * LIMIT
   }`;
 };
 
 export const generateRecsUrl = async (page: number): Promise<string> => {
-  const apiUrl = await getApiUrl();
-  return `${apiUrl}/recs?pos=3200102&limit=${LIMIT}&offset=${
+  const baseUrl = await getBaseUrl();
+  return `${baseUrl}/api/v3/recs?pos=3200102&limit=${LIMIT}&offset=${
     (page - 1) * LIMIT
   }`;
 };
 
 export const generateNewestUrl = async (page: number): Promise<string> => {
-  const apiUrl = await getApiUrl();
-  return `${apiUrl}/update/newest?limit=${LIMIT}&offset=${(page - 1) * LIMIT}`;
+  const baseUrl = await getBaseUrl();
+  return `${baseUrl}/api/v3/update/newest?limit=${LIMIT}&offset=${
+    (page - 1) * LIMIT
+  }`;
 };
 
 export const generateMangaDetailsUrl = async (id: string): Promise<string> => {
-  const apiUrl = await getApiUrl();
-  return `${apiUrl}/comic2/${id}`;
+  const baseUrl = await getBaseUrl();
+  return `${baseUrl}/comic/${id}`;
 };
 
 export const generateChapterListUrl = async (id: string): Promise<string> => {
@@ -442,8 +439,8 @@ export const generatePageListUrl = async (
   mangaId: string,
   chapterId: string
 ): Promise<string> => {
-  const apiUrl = await getApiUrl();
-  return `${apiUrl}/comic/${mangaId}/chapter/${chapterId}`;
+  const baseUrl = await getBaseUrl();
+  return `${baseUrl}/comic/${mangaId}/chapter/${chapterId}`;
 };
 
 // Check if the API response has more pages
