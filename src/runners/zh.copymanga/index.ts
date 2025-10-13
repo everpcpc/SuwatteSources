@@ -66,7 +66,7 @@ export class Target
   async getContent(contentId: string): Promise<Content> {
     const baseUrl = await getBaseUrl();
     const url = await generateMangaDetailsUrl(contentId);
-    console.log(`GET: ${url}`);
+    console.info(`GET: ${url}`);
     const headers = await getRequestHeaders();
     const response = await this.client.get(url, { headers });
 
@@ -194,7 +194,7 @@ export class Target
   ): Promise<ChapterData> {
     const url = await generatePageListUrl(contentId, chapterId);
     const headers = await getRequestHeaders();
-    console.log(`GET: ${url}`);
+    console.info(`GET: ${url}`);
     const response = await this.client.get(url, { headers });
 
     // Extract the decryption key from script tag (same as in getChapters)
@@ -272,7 +272,7 @@ export class Target
 
     const url = await generateExploreUrl(theme, top, ordering, page);
     const headers = await getRequestHeaders();
-    console.log(`GET: ${url}`);
+    console.info(`GET: ${url}`);
     const response = await this.client.get(url, { headers });
 
     // Parse HTML to extract manga list from div.exemptComic-box[list] attribute
