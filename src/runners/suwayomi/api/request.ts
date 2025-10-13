@@ -8,10 +8,10 @@ export async function graphqlRequest<T>(query: string, variables?: any) {
 
   const client = new NetworkClient();
 
-  console.info(`POST ${host}/api/graphql`);
-  console.info("GraphQL Query:", query);
+  console.log(`POST ${host}/api/graphql`);
+  console.log("GraphQL Query:", query);
   if (variables) {
-    console.info("GraphQL Variables:", JSON.stringify(variables, null, 2));
+    console.log("GraphQL Variables:", JSON.stringify(variables, null, 2));
   }
 
   const headers: Record<string, string> = {
@@ -61,7 +61,7 @@ export async function graphqlRequest<T>(query: string, variables?: any) {
 
 export const simpleReq = async (req: NetworkRequest) => {
   const client = new NetworkClient();
-  console.info(`${req.method || "GET"} ${req.url}`);
+  console.log(`${req.method || "GET"} ${req.url}`);
   const response = await client.request(req);
 
   // Check HTTP status code

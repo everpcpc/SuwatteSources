@@ -10,7 +10,7 @@ export async function request<T>(req: NetworkRequest) {
 
   const client = new NetworkClient();
 
-  console.info(`${req.method || "GET"} ${req.url}`);
+  console.log(`${req.method || "GET"} ${req.url}`);
 
   const { data } = await client.request({
     ...req,
@@ -34,7 +34,7 @@ export async function request<T>(req: NetworkRequest) {
 
 export const simpleReq = async (req: NetworkRequest) => {
   const client = new NetworkClient();
-  console.info(`${req.method || "GET"} ${req.url}`);
+  console.log(`${req.method || "GET"} ${req.url}`);
   const { data } = await client.request(req);
   if (!data || data.length === 0) return {};
   const object = JSON.parse(data);

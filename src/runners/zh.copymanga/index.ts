@@ -66,7 +66,7 @@ export class Target
   async getContent(contentId: string): Promise<Content> {
     const baseUrl = await getBaseUrl();
     const url = await generateMangaDetailsUrl(contentId);
-    console.info(`GET: ${url}`);
+    console.log(`GET: ${url}`);
     const headers = await getRequestHeaders();
     const response = await this.client.get(url, { headers });
 
@@ -164,7 +164,7 @@ export class Target
 
     // Now get the chapter list
     const url = await generateChapterListUrl(contentId);
-    console.info(`GET: ${url}`);
+    console.log(`GET: ${url}`);
     const headers = await getRequestHeaders({ includesDnts: true });
     const response = await this.client.get(url, { headers });
 
@@ -197,7 +197,7 @@ export class Target
   ): Promise<ChapterData> {
     const url = await generatePageListUrl(contentId, chapterId);
     const headers = await getRequestHeaders();
-    console.info(`GET: ${url}`);
+    console.log(`GET: ${url}`);
     const response = await this.client.get(url, { headers });
 
     // Extract the decryption key from script tag (same as in getChapters)
@@ -250,7 +250,7 @@ export class Target
   private async search(query: string, page: number): Promise<PagedResult> {
     const url = await generateSearchUrl(query, page);
     const headers = await getRequestHeaders();
-    console.info(`GET: ${url}`);
+    console.log(`GET: ${url}`);
     const response = await this.client.get(url, { headers });
     const data = JSON.parse(response.data);
 
@@ -275,7 +275,7 @@ export class Target
 
     const url = await generateExploreUrl(theme, top, ordering, page);
     const headers = await getRequestHeaders();
-    console.info(`GET: ${url}`);
+    console.log(`GET: ${url}`);
     const response = await this.client.get(url, { headers });
 
     // Parse HTML to extract manga list from div.exemptComic-box[list] attribute
@@ -389,7 +389,7 @@ export class Target
     }
 
     const headers = await getRequestHeaders();
-    console.info(`GET: ${url}`);
+    console.log(`GET: ${url}`);
     const response = await this.client.get(url, { headers });
     const data = JSON.parse(response.data) as ListingResponse;
 
