@@ -180,7 +180,10 @@ export class Target
       const chapterListData = JSON.parse(
         decryptedResults
       ) as ChapterListResponse;
-      return chapterGroupsToChapters(chapterListData.groups, contentId);
+      return chapterGroupsToChapters(
+        chapterListData.groups,
+        chapterListData.build.path_word
+      );
     } catch (error) {
       console.error("Error parsing chapter list:", error);
       return [];

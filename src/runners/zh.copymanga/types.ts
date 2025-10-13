@@ -14,10 +14,13 @@ export type ChapterGroup = {
 export type ChapterItem = {
   id: string;
   name: string;
-  datetime_created: string;
+  type: number;
 };
 
 export type ChapterListResponse = {
+  build: {
+    path_word: string;
+  };
   groups: Record<string, ChapterGroup>;
 };
 

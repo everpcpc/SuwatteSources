@@ -23,6 +23,11 @@ export const getBaseUrl = async (): Promise<string> => {
   return `https://www.${domain || DOMAINS.China}`;
 };
 
+export const getApiBaseUrl = async (): Promise<string> => {
+  const domain = await ConfigStore.domain();
+  return `https://api.${domain || DOMAINS.China}`;
+};
+
 export const getRequestHeaders = async (
   options: { includesDnts?: boolean } = {}
 ): Promise<Record<string, string>> => {
@@ -174,30 +179,43 @@ export const readingModeByRegion = (region: Region): ReadingMode => {
 };
 
 // Parse chapter title to extract volume and chapter numbers
-export const parseChapterTitle = (title: string): Part => {
-  if (title === "全一卷") {
+export const parseChapterTitle = (chapterName: string, type: number): Part => {
+  // If type is 3, don't parse, just return the title
+  if (type === 3) {
     return {
-      volume: 1,
       chapter: 0,
-      title,
+      title: chapterName,
     };
   }
 
-  if (title === "全一話" || title === "全一话") {
-    return {
-      chapter: 1,
-      title,
-    };
+  // Handle special cases first
+  const trimmed = chapterName.trim();
+
+  // Check for "全一X" patterns at the start
+  if (trimmed.startsWith("全") && (trimmed[1] === "一" || trimmed[1] === "1")) {
+    if (trimmed[2] === "卷" || trimmed[2] === "冊" || trimmed[2] === "册") {
+      return {
+        volume: 1,
+        chapter: 0,
+        title: chapterName,
+      };
+    }
+    if (trimmed[2] === "話" || trimmed[2] === "话" || trimmed[2] === "回") {
+      return {
+        chapter: 1,
+        title: chapterName,
+      };
+    }
   }
 
   const regex =
-    /^(单行本：)?(第?(?<volume>[\d零一二三四五六七八九十百千]+(\.\d)?)[卷部季]完?)?((第|连载|CH)?(?<chapter>[\d零一二三四五六七八九十百千]+([-.]\d+)?)[話话回]?(-?[(（]?(?<part>([前中后上下]|\d+))[)）]?篇?)?(试看)?)?(\s.*|$)/;
-  const match = regex.exec(title);
+    /^(?<volume>第?(?<volume_num>[\d零一二三四五六七八九十百千]+(\.\d)?)[卷部季冊册]完?)?(?<chapter>(第|连载|CH)?(?<chapter_num>[\d零一二三四五六七八九十百千]+(\.\d+)?)(?<more_chapters>-(\d+(\.\d+)?))?[話话回]?)?([ +]|$)/;
+  const match = regex.exec(trimmed);
 
   if (!match || !match.groups) {
     return {
       chapter: 0,
-      title,
+      title: chapterName,
     };
   }
 
@@ -242,28 +260,23 @@ export const parseChapterTitle = (title: string): Part => {
     return result + temp;
   };
 
-  const volume = getNumber(match.groups.volume);
+  const volumeNum = getNumber(match.groups.volume_num);
+  const chapterNum = getNumber(match.groups.chapter_num);
 
-  const part = match.groups.part
-    ? match.groups.part === "前" || match.groups.part === "上"
-      ? "0"
-      : match.groups.part === "中"
-      ? "25"
-      : match.groups.part === "后" || match.groups.part === "下"
-      ? "5"
-      : match.groups.part
-    : "0";
-
-  let chapter = getNumber(match.groups.chapter);
-  if (chapter !== undefined && part) {
-    const chapterStr = `${chapter}${chapter % 1 === 0 ? "." : ""}${part}`;
-    chapter = parseFloat(chapterStr);
+  // Remove matched parts from the title
+  let realTitle = trimmed;
+  if (match.groups.volume) {
+    realTitle = realTitle.replace(match.groups.volume, "");
   }
+  if (!match.groups.more_chapters && match.groups.chapter) {
+    realTitle = realTitle.replace(match.groups.chapter, "");
+  }
+  realTitle = realTitle.trim();
 
   return {
-    volume,
-    chapter: chapter ?? 0,
-    title,
+    volume: volumeNum,
+    chapter: chapterNum ?? 0,
+    title: realTitle || chapterName,
   };
 };
 
@@ -310,27 +323,27 @@ export const chapterGroupsToChapters = async (
 ): Promise<Chapter[]> => {
   const allChapters: {
     chapterId: string;
-    title: string;
+    chapterName: string;
+    chapterType: number;
     timestamp: number;
-    groupName?: string;
+    groupName: string;
   }[] = [];
   const baseUrl = await getBaseUrl();
 
   Object.values(groups).forEach((group) => {
     const groupName = group.name;
-    const titlePrefix = groupName === "默認" ? "" : `${groupName}：`;
 
     group.chapters.forEach((chapter) => {
       const chapterId = chapter.id;
-      const title = `${titlePrefix}${chapter.name}`;
 
       try {
         const timestamp = getTimestampFromUuid(chapterId);
         allChapters.push({
           chapterId,
-          title,
+          chapterName: chapter.name,
+          chapterType: chapter.type,
           timestamp,
-          groupName: groupName !== "默認" ? groupName : undefined,
+          groupName,
         });
       } catch (error) {
         console.error(`Error processing chapter ${chapterId}:`, error);
@@ -341,18 +354,29 @@ export const chapterGroupsToChapters = async (
   allChapters.sort((a, b) => b.timestamp - a.timestamp);
 
   return allChapters.map((chapterInfo, index) => {
-    const part = parseChapterTitle(chapterInfo.title);
+    // Parse the chapter name to extract volume/chapter numbers
+    const part = parseChapterTitle(
+      chapterInfo.chapterName,
+      chapterInfo.chapterType
+    );
+
+    // Create the final title with group prefix if not default group
+    const titlePrefix =
+      chapterInfo.groupName === "默認" ? "" : `${chapterInfo.groupName}：`;
+    const finalTitle = part.title
+      ? `${titlePrefix}${part.title}`
+      : `${titlePrefix}${chapterInfo.chapterName}`;
 
     return {
       id: chapterInfo.chapterId,
       chapterId: chapterInfo.chapterId,
-      title: part.title,
+      title: finalTitle,
       number: part.chapter,
       volume: part.volume,
       date: new Date(chapterInfo.timestamp * 1000),
       index,
       language: "zh",
-      ...(chapterInfo.groupName && {
+      ...(chapterInfo.groupName !== "默認" && {
         providers: [{ id: chapterInfo.groupName, name: chapterInfo.groupName }],
       }),
       contentId: mangaId,
@@ -405,21 +429,21 @@ export const generateRankUrl = async (
   dateType: string,
   page: number
 ): Promise<string> => {
-  const baseUrl = await getBaseUrl();
+  const baseUrl = await getApiBaseUrl();
   return `${baseUrl}/api/v3/ranks?date_type=${dateType}&limit=${LIMIT}&offset=${
     (page - 1) * LIMIT
   }`;
 };
 
 export const generateRecsUrl = async (page: number): Promise<string> => {
-  const baseUrl = await getBaseUrl();
+  const baseUrl = await getApiBaseUrl();
   return `${baseUrl}/api/v3/recs?pos=3200102&limit=${LIMIT}&offset=${
     (page - 1) * LIMIT
   }`;
 };
 
 export const generateNewestUrl = async (page: number): Promise<string> => {
-  const baseUrl = await getBaseUrl();
+  const baseUrl = await getApiBaseUrl();
   return `${baseUrl}/api/v3/update/newest?limit=${LIMIT}&offset=${
     (page - 1) * LIMIT
   }`;
