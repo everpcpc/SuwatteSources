@@ -28,25 +28,34 @@ export const getApiUrl = async (): Promise<string> => {
   return `https://api.${domain || DOMAINS.China}/api/v3`;
 };
 
-export const getRequestHeaders = async (): Promise<Record<string, string>> => {
+export const getRequestHeaders = async (
+  options: { includesDnts?: boolean } = {}
+): Promise<Record<string, string>> => {
   const baseUrl = await getBaseUrl();
-  return {
+  const headers: Record<string, string> = {
     "User-Agent":
-      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
+      "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.5 Safari/605.1.15",
     Referer: baseUrl,
-    version: "2.3.6",
-    platform: "3",
-    region: "1",
-    webp: "1",
   };
+
+  if (options.includesDnts) {
+    headers["dnts"] = "1";
+  }
+
+  return headers;
 };
 
-export const decryptString = (encryptedString: string): string => {
+export const decryptString = (
+  encryptedString: string,
+  decryptionKey?: string
+): string => {
   try {
     const iv = encryptedString.substring(0, 16);
     const hexCiphertext = encryptedString.substring(16);
 
-    const key = CryptoJS.enc.Utf8.parse(DECRYPT_KEY);
+    // Use the provided key or fall back to the default key
+    const keyString = decryptionKey || DECRYPT_KEY;
+    const key = CryptoJS.enc.Utf8.parse(keyString);
     const ivBytes = CryptoJS.enc.Utf8.parse(iv);
 
     const cipherParams = CryptoJS.lib.CipherParams.create({
@@ -370,14 +379,31 @@ export const generateExploreUrl = async (
   }`;
 };
 
+export const getSearchApiEndpoint = async (): Promise<string> => {
+  const baseUrl = await getBaseUrl();
+  const searchPageUrl = `${baseUrl}/search`;
+  const headers = await getRequestHeaders();
+
+  const client = new NetworkClient();
+  const response = await client.get(searchPageUrl, { headers });
+
+  // Extract the API endpoint from the search page
+  const match = response.data.match(/const countApi = "([^"]+)"/);
+  if (!match || !match[1]) {
+    throw new Error("Failed to extract search API endpoint");
+  }
+
+  return match[1];
+};
+
 export const generateSearchUrl = async (
   query: string,
   page: number
 ): Promise<string> => {
-  const apiUrl = await getApiUrl();
-  return `${apiUrl}/search/comic?q=${encodeURIComponent(
+  const searchApi = await getSearchApiEndpoint();
+  return `${searchApi}?q=${encodeURIComponent(
     query
-  )}&&limit=${LIMIT}&offset=${(page - 1) * LIMIT}`;
+  )}&platform=2&limit=${LIMIT}&offset=${(page - 1) * LIMIT}&q_type=`;
 };
 
 export const generateRankUrl = async (

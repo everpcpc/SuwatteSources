@@ -55,8 +55,8 @@ import { ConfigStore } from "./store";
 export const info: RunnerInfo = {
   id: "zh.copymanga",
   name: "拷贝漫画",
-  version: 1.1,
-  website: "https://www.copymanga.tv",
+  version: 1.2,
+  website: "https://www.mangacopy.com/",
   supportedLanguages: ["zh"],
   thumbnail: "copymanga.png",
   minSupportedAppVersion: "5.0",
@@ -150,9 +150,26 @@ export class Target
 
   // Get chapter list for a manga
   async getChapters(contentId: string): Promise<Chapter[]> {
+    // First, get the HTML manga detail page to extract the decryption key
+    const baseUrl = await getBaseUrl();
+    const mangaPageUrl = `${baseUrl}/comic/${contentId}`;
+    const detailHeaders = await getRequestHeaders();
+    const mangaPageResponse = await this.client.get(mangaPageUrl, {
+      headers: detailHeaders,
+    });
+
+    // Extract the key from script tags in the HTML page
+    // The key is in a script tag like: var key = 'some-key'
+    const keyMatch = mangaPageResponse.data.match(/var\s+\w+\s*=\s*'([^']+)'/);
+    if (!keyMatch || !keyMatch[1]) {
+      throw new Error("Failed to extract decryption key from manga page");
+    }
+    const decryptionKey = keyMatch[1];
+
+    // Now get the chapter list
     const url = await generateChapterListUrl(contentId);
     console.log(`GET: ${url}`);
-    const headers = await getRequestHeaders();
+    const headers = await getRequestHeaders({ includesDnts: true });
     const response = await this.client.get(url, { headers });
 
     const resultsMatch = response.data.match(/"results":"([^"]+)"/);
@@ -161,7 +178,7 @@ export class Target
     }
 
     const encryptedResults = resultsMatch[1];
-    const decryptedResults = decryptString(encryptedResults);
+    const decryptedResults = decryptString(encryptedResults, decryptionKey);
 
     try {
       const chapterListData = JSON.parse(
@@ -191,11 +208,6 @@ export class Target
 
     const chapter = data.results.chapter;
     const pageList = chapter.contents || [];
-
-    // Use the image format from the API response
-    const imageFormat = "jpg";
-    const imageQuality = "c800x";
-    const imageExt = `${imageQuality}.${imageFormat}`;
 
     const pages = pageList.map((page: any, index: number) => ({
       index,

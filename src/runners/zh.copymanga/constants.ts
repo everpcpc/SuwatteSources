@@ -140,6 +140,6 @@ export const LISTING_TYPES = {
 };
 
 export const DOMAINS = {
-  China: "mangacopy.com",
-  Global: "copymanga.tv",
+  China: "2025copy.com",
+  Global: "mangacopy.com",
 };
