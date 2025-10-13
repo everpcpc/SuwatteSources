@@ -180,13 +180,21 @@ export class Target
       const chapterListData = JSON.parse(
         decryptedResults
       ) as ChapterListResponse;
+
+      if (!chapterListData.groups) {
+        throw new Error("無法獲取章節列表，請嘗試更換網絡後重試");
+      }
+
       return chapterGroupsToChapters(
         chapterListData.groups,
         chapterListData.build.path_word
       );
     } catch (error) {
-      console.error("Error parsing chapter list:", error);
-      return [];
+      if (error instanceof SyntaxError) {
+        console.error("Error parsing chapter list:", error);
+        throw new Error("章節列表解析失敗，請嘗試更換網絡後重試");
+      }
+      throw error;
     }
   }
 
