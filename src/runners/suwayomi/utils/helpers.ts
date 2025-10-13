@@ -63,13 +63,17 @@ export const chapterToChapter = (
   chapter: ChapterType,
   index: number
 ): Chapter => {
-  const date = new Date(parseInt(chapter.uploadDate));
-  const chapterDate = isNaN(date.getTime()) ? new Date(0) : date;
-
+  const uploadDate = parseInt(chapter.uploadDate);
+  let date: Date;
+  if (!uploadDate) {
+    date = new Date(0);
+  } else {
+    date = new Date(uploadDate);
+  }
   return {
     chapterId: chapter.id.toString(),
     title: chapter.name,
-    date: chapterDate,
+    date,
     number: chapter.chapterNumber,
     index,
     language: DefinedLanguages.UNIVERSAL,
