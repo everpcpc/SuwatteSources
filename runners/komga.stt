@@ -211,6 +211,7 @@ async function request(req) {
     if (!credentials)
         throw new Error("You are not signed in!");
     const client = new NetworkClient();
+    console.info(`${req.method || "GET"} ${req.url}`);
     const { data } = await client.request({
         ...req,
         headers: {
@@ -233,6 +234,7 @@ async function request(req) {
 exports.request = request;
 const simpleReq = async (req) => {
     const client = new NetworkClient();
+    console.info(`${req.method || "GET"} ${req.url}`);
     const { data } = await client.request(req);
     if (!data || data.length === 0)
         return {};
