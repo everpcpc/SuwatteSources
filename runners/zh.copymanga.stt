@@ -160,7 +160,7 @@ class Target {
     async getContent(contentId) {
         const baseUrl = await (0, utils_1.getBaseUrl)();
         const url = await (0, utils_1.generateMangaDetailsUrl)(contentId);
-        console.info(`GET: ${url}`);
+        console.log(`GET: ${url}`);
         const headers = await (0, utils_1.getRequestHeaders)();
         const response = await this.client.get(url, { headers });
         // Parse HTML to extract manga details
@@ -240,7 +240,7 @@ class Target {
         const decryptionKey = keyMatch[1];
         // Now get the chapter list
         const url = await (0, utils_1.generateChapterListUrl)(contentId);
-        console.info(`GET: ${url}`);
+        console.log(`GET: ${url}`);
         const headers = await (0, utils_1.getRequestHeaders)({ includesDnts: true });
         const response = await this.client.get(url, { headers });
         const resultsMatch = response.data.match(/"results":"([^"]+)"/);
@@ -262,7 +262,7 @@ class Target {
     async getChapterData(contentId, chapterId) {
         const url = await (0, utils_1.generatePageListUrl)(contentId, chapterId);
         const headers = await (0, utils_1.getRequestHeaders)();
-        console.info(`GET: ${url}`);
+        console.log(`GET: ${url}`);
         const response = await this.client.get(url, { headers });
         // Extract the decryption key from script tag (same as in getChapters)
         const keyMatch = response.data.match(/var\s+\w+\s*=\s*'([^']+)'/);
@@ -303,7 +303,7 @@ class Target {
     async search(query, page) {
         const url = await (0, utils_1.generateSearchUrl)(query, page);
         const headers = await (0, utils_1.getRequestHeaders)();
-        console.info(`GET: ${url}`);
+        console.log(`GET: ${url}`);
         const response = await this.client.get(url, { headers });
         const data = JSON.parse(response.data);
         if (!data.results || !data.results.list) {
@@ -323,7 +323,7 @@ class Target {
         const page = Math.floor(offset / limit) + 1;
         const url = await (0, utils_1.generateExploreUrl)(theme, top, ordering, page);
         const headers = await (0, utils_1.getRequestHeaders)();
-        console.info(`GET: ${url}`);
+        console.log(`GET: ${url}`);
         const response = await this.client.get(url, { headers });
         // Parse HTML to extract manga list from div.exemptComic-box[list] attribute
         const listMatch = response.data.match(/class="row exemptComic-box"[^>]*list="([^"]+)"/);
@@ -426,7 +426,7 @@ class Target {
                 return this.getDirectory({ page });
         }
         const headers = await (0, utils_1.getRequestHeaders)();
-        console.info(`GET: ${url}`);
+        console.log(`GET: ${url}`);
         const response = await this.client.get(url, { headers });
         const data = JSON.parse(response.data);
         if (!data.results || !data.results.list) {

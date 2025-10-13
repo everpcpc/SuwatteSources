@@ -261,10 +261,10 @@ async function graphqlRequest(query, variables) {
     if (!host)
         throw new Error("You have not defined a server url!");
     const client = new NetworkClient();
-    console.info(`POST ${host}/api/graphql`);
-    console.info("GraphQL Query:", query);
+    console.log(`POST ${host}/api/graphql`);
+    console.log("GraphQL Query:", query);
     if (variables) {
-        console.info("GraphQL Variables:", JSON.stringify(variables, null, 2));
+        console.log("GraphQL Variables:", JSON.stringify(variables, null, 2));
     }
     const headers = {
         "Content-Type": "application/json",
@@ -307,7 +307,7 @@ async function graphqlRequest(query, variables) {
 exports.graphqlRequest = graphqlRequest;
 const simpleReq = async (req) => {
     const client = new NetworkClient();
-    console.info(`${req.method || "GET"} ${req.url}`);
+    console.log(`${req.method || "GET"} ${req.url}`);
     const response = await client.request(req);
     // Check HTTP status code
     if (response.status < 200 || response.status >= 300) {
