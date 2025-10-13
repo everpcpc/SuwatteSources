@@ -41,10 +41,10 @@ export const SuwayomiProgressProvider: ProgressSyncHandler = {
       return { readChapterIds };
     }
     const readDate = new Date(lastReadAt * 1000);
+    const pageCount =
+      lastReadChapter.pageCount > 0 ? lastReadChapter.pageCount : 1;
     const progress =
-      Math.round(
-        (lastReadChapter.lastPageRead / lastReadChapter.pageCount) * 100
-      ) / 100;
+      Math.round((lastReadChapter.lastPageRead / pageCount) * 100) / 100;
     return {
       readChapterIds,
       currentReadingState: {

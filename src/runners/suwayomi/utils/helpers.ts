@@ -87,6 +87,7 @@ export const mangaToContent = async (manga: MangaType): Promise<Content> => {
     : "";
 
   const info: string[] = [];
+  const creators: string[] = [];
 
   if (manga.unreadCount === 0 && (manga.chapters?.totalCount ?? 0) > 0) {
     info.push("Finished");
@@ -97,15 +98,16 @@ export const mangaToContent = async (manga: MangaType): Promise<Content> => {
   }
 
   if (manga.author) {
-    info.push(manga.author);
+    creators.push(manga.author);
   }
 
   if (manga.genre && manga.genre.length > 0) {
-    info.push(...manga.genre);
+    info.push(...manga.genre.filter((genre) => genre !== ""));
   }
 
   return {
     title: manga.title,
+    creators,
     cover,
     status: convertStatus(manga.status),
     info,
