@@ -304,8 +304,13 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.KomgaBookEvent = void 0;
 const api_1 = require("../api");
 const utils_1 = require("../utils");
+const store_1 = require("../store");
 exports.KomgaBookEvent = {
     onChaptersMarked: async function (_, bookIds, completed) {
+        const syncChaptersMarked = await store_1.KomgaStore.syncChaptersMarked();
+        if (!syncChaptersMarked) {
+            return;
+        }
         const promises = bookIds.map((v) => markAsRead(v, completed));
         const state = await Promise.allSettled(promises);
         const failing = state.filter((v) => v.status === "rejected").length;
@@ -342,7 +347,7 @@ const markAsRead = async (bookId, completed = true) => {
     });
 };
 
-},{"../api":2,"../utils":21}],7:[function(require,module,exports){
+},{"../api":2,"../store":18,"../utils":21}],7:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.KomgaContentSource = void 0;
@@ -700,6 +705,14 @@ exports.KomgaPreferenceProvider = {
                                 await ObjectStore.set("openAsTitle", value);
                             },
                         }),
+                        (0, daisuke_1.UIToggle)({
+                            id: "syncChaptersMarked",
+                            title: "Sync Chapters Marked",
+                            value: await store_1.KomgaStore.syncChaptersMarked(),
+                            async didChange(value) {
+                                await ObjectStore.set("syncChaptersMarked", value);
+                            },
+                        }),
                     ],
                 },
             ],
@@ -835,7 +848,7 @@ const pageLinkResolver_1 = require("./impl/pageLinkResolver");
 const info = {
     id: "org.komga",
     name: "Komga",
-    version: 1.17,
+    version: 1.18,
     minSupportedAppVersion: "6.0.0",
     thumbnail: "komga.png",
     website: "https://komga.org",
@@ -880,6 +893,7 @@ exports.KomgaStore = {
     credentials: () => SecureStore.string("credentials"),
     authenticated: () => ObjectStore.get("authenticated"),
     openSeriesAsTitle: () => ObjectStore.boolean("openAsTitle"),
+    syncChaptersMarked: () => ObjectStore.boolean("syncChaptersMarked"),
 };
 
 },{}],19:[function(require,module,exports){
