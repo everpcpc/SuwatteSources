@@ -3,4 +3,5 @@ export const KomgaStore = {
   credentials: () => SecureStore.string("credentials"),
   authenticated: () => ObjectStore.get("authenticated"),
   openSeriesAsTitle: () => ObjectStore.boolean("openAsTitle"),
+  syncChaptersMarked: () => ObjectStore.boolean("syncChaptersMarked"),
 };

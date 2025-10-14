@@ -16,6 +16,14 @@ export const KomgaPreferenceProvider: RunnerPreferenceProvider = {
                 await ObjectStore.set("openAsTitle", value);
               },
             }),
+            UIToggle({
+              id: "syncChaptersMarked",
+              title: "Sync Chapters Marked",
+              value: await KomgaStore.syncChaptersMarked(),
+              async didChange(value) {
+                await ObjectStore.set("syncChaptersMarked", value);
+              },
+            }),
           ],
         },
       ],
