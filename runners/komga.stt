@@ -398,7 +398,6 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.KomgaDirectoryHandler = void 0;
 const utils_1 = require("../utils");
 const api_1 = require("../api");
-const store_1 = require("../store");
 /**
  * Implementation of the DirectoryHandler Methods
  */
@@ -431,7 +430,6 @@ async function fetchDirectory(request) {
     if (!host) {
         throw new Error("Host not defined");
     }
-    const asTitle = await store_1.KomgaStore.openSeriesAsTitle();
     if (seriesId) {
         const sort = (0, utils_1.convertSort)(request.sort?.id) ?? utils_1.Sort.Number;
         const result = await (0, api_1.getBooksForSeries)(seriesId, (0, utils_1.buildSort)(sort, request.sort?.ascending), filters, request.page);
@@ -442,7 +440,7 @@ async function fetchDirectory(request) {
     }
     else if (libraryId) {
         const sort = (0, utils_1.convertSort)(request.sort?.id) ?? utils_1.Sort.DateUpdated;
-        const results = (await (0, api_1.getSeriesForLibrary)(libraryId, (0, utils_1.buildSort)(sort, request.sort?.ascending), filters, request.page, request.query)).map((v) => (0, utils_1.seriesToTile)(v, host, !(asTitle ?? false)));
+        const results = (await (0, api_1.getSeriesForLibrary)(libraryId, (0, utils_1.buildSort)(sort, request.sort?.ascending), filters, request.page, request.query)).map((v) => (0, utils_1.seriesToTile)(v, host));
         return {
             results,
             isLastPage: results.length < utils_1.RESULT_COUNT,
@@ -451,7 +449,7 @@ async function fetchDirectory(request) {
     const isSeriesDirectory = request.context?.isSeriesDirectory ?? false;
     if (isSeriesDirectory) {
         const sort = (0, utils_1.convertSort)(request.sort?.id) ?? utils_1.Sort.DateUpdated;
-        const results = (await (0, api_1.getSeriesForLibrary)(libraryId, (0, utils_1.buildSort)(sort, request.sort?.ascending), filters, request.page, request.query)).map((v) => (0, utils_1.seriesToTile)(v, host, !(asTitle ?? false)));
+        const results = (await (0, api_1.getSeriesForLibrary)(libraryId, (0, utils_1.buildSort)(sort, request.sort?.ascending), filters, request.page, request.query)).map((v) => (0, utils_1.seriesToTile)(v, host));
         return {
             results,
             isLastPage: results.length < utils_1.RESULT_COUNT,
@@ -467,7 +465,7 @@ async function fetchDirectory(request) {
     }
 }
 
-},{"../api":2,"../store":18,"../utils":21}],9:[function(require,module,exports){
+},{"../api":2,"../utils":21}],9:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.KomgaImageHandler = void 0;
@@ -565,7 +563,6 @@ const daisuke_1 = require("@suwatte/daisuke");
 const library_1 = require("../api/library");
 const utils_1 = require("../utils");
 const api_1 = require("../api");
-const store_1 = require("../store");
 exports.KomgaPageLinkResolver = {
     getSectionsForPage: async function (link) {
         switch (link.id) {
@@ -630,10 +627,9 @@ async function buildBrowseLibrarySections(libraryId) {
 async function resolveLibrarySection(libraryId, sectionKey) {
     let items = [];
     const convertSeriesToItems = async (key) => {
-        const openAsTitle = await store_1.KomgaStore.openSeriesAsTitle();
         const series = await (0, library_1.getSeriesForLibraryWithState)(libraryId, key);
         const host = await (0, api_1.getHost)();
-        const highlights = (series ?? []).map((data) => (0, utils_1.seriesToTile)(data, host, !openAsTitle));
+        const highlights = (series ?? []).map((data) => (0, utils_1.seriesToTile)(data, host));
         return highlights;
     };
     switch (sectionKey) {
@@ -684,7 +680,7 @@ async function resolveLibrarySection(libraryId, sectionKey) {
     return { items };
 }
 
-},{"../api":2,"../api/library":3,"../store":18,"../utils":21,"@suwatte/daisuke":22}],13:[function(require,module,exports){
+},{"../api":2,"../api/library":3,"../utils":21,"@suwatte/daisuke":22}],13:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.KomgaPreferenceProvider = void 0;
@@ -697,14 +693,6 @@ exports.KomgaPreferenceProvider = {
                 {
                     header: "Core",
                     children: [
-                        (0, daisuke_1.UIToggle)({
-                            id: "openAsTitle",
-                            title: "Open Series as Title",
-                            value: await store_1.KomgaStore.openSeriesAsTitle(),
-                            async didChange(value) {
-                                await ObjectStore.set("openAsTitle", value);
-                            },
-                        }),
                         (0, daisuke_1.UIToggle)({
                             id: "syncChaptersMarked",
                             title: "Sync Chapters Marked",
@@ -892,7 +880,6 @@ exports.KomgaStore = {
     host: () => ObjectStore.string("host"),
     credentials: () => SecureStore.string("credentials"),
     authenticated: () => ObjectStore.get("authenticated"),
-    openSeriesAsTitle: () => ObjectStore.boolean("openAsTitle"),
     syncChaptersMarked: () => ObjectStore.boolean("syncChaptersMarked"),
 };
 
@@ -1045,7 +1032,7 @@ const genURL = async (url) => {
     return val;
 };
 exports.genURL = genURL;
-const seriesToTile = (series, host, asRequest) => {
+const seriesToTile = (series, host) => {
     const cover = `${host}/api/v1/series/${series.id}/thumbnail`;
     const subtitle = `${series.booksCount} Book${series.booksCount != 1 ? "s" : ""}`;
     return {
@@ -1057,17 +1044,6 @@ const seriesToTile = (series, host, asRequest) => {
             badge: {
                 color: "#0096FF",
                 count: series.booksUnreadCount,
-            },
-        }),
-        ...(asRequest && {
-            link: {
-                request: {
-                    configID: "series",
-                    page: 1,
-                    context: {
-                        seriesId: series.id,
-                    },
-                },
             },
         }),
     };
