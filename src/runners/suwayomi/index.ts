@@ -5,6 +5,7 @@ import {
   SourceConfig,
 } from "@suwatte/daisuke";
 import {
+  SuwayomiAuthentication,
   SuwayomiChapterEvent,
   SuwayomiContentSource,
   SuwayomiDirectoryHandler,
@@ -22,7 +23,7 @@ type Suwayomi = ContentSource;
 const info: RunnerInfo = {
   id: "org.suwayomi",
   name: "Suwayomi",
-  version: 1.1,
+  version: 1.2,
   minSupportedAppVersion: "6.0.0",
   thumbnail: "suwayomi.png",
   website: "https://github.com/Suwayomi",
@@ -41,12 +42,13 @@ const config: SourceConfig = {
   disableTrackerLinking: true,
   disableUpdateChecks: true,
   allowsMultipleInstances: true,
-  requiresAuthenticationToAccessContent: false, // Authentication is optional for Suwayomi
+  requiresAuthenticationToAccessContent: false, // Authentication is optional and configurable
 };
 
 export const Target: Suwayomi = {
   info,
   config,
+  ...SuwayomiAuthentication,
   ...SuwayomiContentSource,
   ...SuwayomiDirectoryHandler,
   ...SuwayomiPageProvider,

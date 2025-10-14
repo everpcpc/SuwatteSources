@@ -1,3 +1,4 @@
+export * from "./auth";
 export * from "./contentSource";
 export * from "./directoryHandler";
 export * from "./pageLinkProvider";

@@ -1,8 +1,11 @@
-import { NetworkRequest } from "@suwatte/daisuke";
+import { NetworkRequest, NetworkResponse } from "@suwatte/daisuke";
 import { SuwayomiStore } from "../store";
+import { AuthMode } from "../types/auth";
 
 export async function graphqlRequest<T>(query: string, variables?: any) {
   const host = await SuwayomiStore.host();
+  const authMode = await SuwayomiStore.authMode();
+  const credentials = await SuwayomiStore.credentials();
 
   if (!host) throw new Error("You have not defined a server url!");
 
@@ -17,6 +20,12 @@ export async function graphqlRequest<T>(query: string, variables?: any) {
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
   };
+
+  // Add Basic Auth header only if in Basic Auth mode and credentials are available
+  if (authMode === AuthMode.BASIC && credentials) {
+    headers.Authorization = `Basic ${credentials}`;
+  }
+
   const response = await client.request({
     url: `${host}/api/graphql`,
     method: "POST",
@@ -24,6 +33,13 @@ export async function graphqlRequest<T>(query: string, variables?: any) {
     body: {
       query,
       variables,
+    },
+    transformResponse: async (res: NetworkResponse) => {
+      if (res.status === 401) {
+        // Signed Out
+        await ObjectStore.remove("authenticated");
+      }
+      return res;
     },
   });
 
@@ -60,9 +76,24 @@ export async function graphqlRequest<T>(query: string, variables?: any) {
 }
 
 export const simpleReq = async (req: NetworkRequest) => {
+  const authMode = await SuwayomiStore.authMode();
+  const credentials = await SuwayomiStore.credentials();
   const client = new NetworkClient();
   console.log(`${req.method || "GET"} ${req.url}`);
-  const response = await client.request(req);
+
+  // Build request with optional Basic Auth (only in Basic Auth mode)
+  const requestConfig = {
+    ...req,
+    headers:
+      authMode === AuthMode.BASIC && credentials
+        ? {
+            ...req.headers,
+            Authorization: `Basic ${credentials}`,
+          }
+        : req.headers,
+  };
+
+  const response = await client.request(requestConfig);
 
   // Check HTTP status code
   if (response.status < 200 || response.status >= 300) {
