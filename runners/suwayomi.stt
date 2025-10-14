@@ -817,7 +817,6 @@ exports.SuwayomiSetupProvider = {
                 await (0, request_1.graphqlRequest)(auth_1.ABOUT_SERVER_QUERY);
             }
             catch (error) {
-                console.error(`${error}`);
                 throw new Error("Cannot Connect to Suwayomi Server");
             }
         }
