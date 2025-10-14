@@ -23,7 +23,7 @@ type Suwayomi = ContentSource;
 const info: RunnerInfo = {
   id: "org.suwayomi",
   name: "Suwayomi",
-  version: 1.2,
+  version: 1.3,
   minSupportedAppVersion: "6.0.0",
   thumbnail: "suwayomi.png",
   website: "https://github.com/Suwayomi",

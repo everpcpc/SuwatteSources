@@ -26,4 +26,8 @@ export const SuwayomiStore = {
   setAuthMode: async (mode: AuthMode) => {
     await ObjectStore.set("authMode", mode);
   },
+  syncChaptersMarked: async () => {
+    const value = await ObjectStore.boolean("syncChaptersMarked");
+    return value;
+  },
 };

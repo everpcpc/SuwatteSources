@@ -1,5 +1,6 @@
 import { ChapterEventHandler } from "@suwatte/daisuke";
 import { graphqlRequest } from "../api";
+import { SuwayomiStore } from "../store";
 
 export const SuwayomiChapterEvent: ChapterEventHandler = {
   onChaptersMarked: async function (
@@ -7,6 +8,11 @@ export const SuwayomiChapterEvent: ChapterEventHandler = {
     chapterIds: string[],
     completed: boolean
   ): Promise<void> {
+    const syncChaptersMarked = await SuwayomiStore.syncChaptersMarked();
+    if (!syncChaptersMarked) {
+      return;
+    }
+
     const promises = chapterIds.map((v) => markAsRead(v, completed));
     const state = await Promise.allSettled(promises);
 
