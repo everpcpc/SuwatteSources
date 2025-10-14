@@ -485,8 +485,13 @@ exports.SuwayomiAuthentication = {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.SuwayomiChapterEvent = void 0;
 const api_1 = require("../api");
+const store_1 = require("../store");
 exports.SuwayomiChapterEvent = {
     onChaptersMarked: async function (_, chapterIds, completed) {
+        const syncChaptersMarked = await store_1.SuwayomiStore.syncChaptersMarked();
+        if (!syncChaptersMarked) {
+            return;
+        }
         const promises = chapterIds.map((v) => markAsRead(v, completed));
         const state = await Promise.allSettled(promises);
         const failing = state.filter((v) => v.status === "rejected").length;
@@ -531,7 +536,7 @@ const markAsRead = async (chapterId, completed = true) => {
     });
 };
 
-},{"../api":2}],7:[function(require,module,exports){
+},{"../api":2,"../store":16}],7:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.SuwayomiContentSource = void 0;
@@ -696,15 +701,31 @@ exports.SuwayomiPageProvider = {
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.SuwayomiPreferenceProvider = void 0;
+const daisuke_1 = require("@suwatte/daisuke");
+const store_1 = require("../store");
 exports.SuwayomiPreferenceProvider = {
     getPreferenceMenu: async function () {
         return {
-            sections: [],
+            sections: [
+                {
+                    header: "Core",
+                    children: [
+                        (0, daisuke_1.UIToggle)({
+                            id: "syncChaptersMarked",
+                            title: "Sync Chapters Marked",
+                            value: await store_1.SuwayomiStore.syncChaptersMarked(),
+                            async didChange(value) {
+                                await ObjectStore.set("syncChaptersMarked", value);
+                            },
+                        }),
+                    ],
+                },
+            ],
         };
     },
 };
 
-},{}],13:[function(require,module,exports){
+},{"../store":16,"@suwatte/daisuke":22}],13:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.SuwayomiProgressProvider = void 0;
@@ -841,7 +862,7 @@ const impl_1 = require("./impl");
 const info = {
     id: "org.suwayomi",
     name: "Suwayomi",
-    version: 1.2,
+    version: 1.3,
     minSupportedAppVersion: "6.0.0",
     thumbnail: "suwayomi.png",
     website: "https://github.com/Suwayomi",
@@ -905,6 +926,10 @@ exports.SuwayomiStore = {
     },
     setAuthMode: async (mode) => {
         await ObjectStore.set("authMode", mode);
+    },
+    syncChaptersMarked: async () => {
+        const value = await ObjectStore.boolean("syncChaptersMarked");
+        return value;
     },
 };
 
