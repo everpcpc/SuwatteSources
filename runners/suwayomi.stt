@@ -821,6 +821,9 @@ exports.SuwayomiSetupProvider = {
                 throw new Error("Cannot Connect to Suwayomi Server");
             }
         }
+        else {
+            console.info("Please login after setup");
+        }
     },
     isRunnerSetup: async function () {
         return {
