@@ -14,7 +14,6 @@ import {
 } from "../api/library";
 import { ReadStatus, Sort, buildSort, seriesToTile } from "../utils";
 import { getHost } from "../api";
-import { KomgaStore } from "../store";
 
 export const KomgaPageLinkResolver: PageLinkResolver = {
   getSectionsForPage: async function (link: PageLink): Promise<PageSection[]> {
@@ -102,13 +101,11 @@ async function resolveLibrarySection(
   let items: Highlight[] = [];
 
   const convertSeriesToItems = async (key: "new" | "updated") => {
-    const openAsTitle = await KomgaStore.openSeriesAsTitle();
-
     const series = await getSeriesForLibraryWithState(libraryId, key);
 
     const host = await getHost();
     const highlights: Highlight[] = (series ?? []).map((data) =>
-      seriesToTile(data, host, !openAsTitle)
+      seriesToTile(data, host)
     );
     return highlights;
   };

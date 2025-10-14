@@ -47,11 +47,7 @@ export const genURL = async (url: string) => {
   return val;
 };
 
-export const seriesToTile = (
-  series: SeriesDto,
-  host: string,
-  asRequest: boolean
-): Highlight => {
+export const seriesToTile = (series: SeriesDto, host: string): Highlight => {
   const cover = `${host}/api/v1/series/${series.id}/thumbnail`;
   const subtitle = `${series.booksCount} Book${
     series.booksCount != 1 ? "s" : ""
@@ -65,17 +61,6 @@ export const seriesToTile = (
       badge: {
         color: "#0096FF",
         count: series.booksUnreadCount,
-      },
-    }),
-    ...(asRequest && {
-      link: {
-        request: {
-          configID: "series",
-          page: 1,
-          context: {
-            seriesId: series.id,
-          },
-        },
       },
     }),
   };

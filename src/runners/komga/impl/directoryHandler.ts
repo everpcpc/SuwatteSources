@@ -21,7 +21,6 @@ import {
   getHost,
   getSeriesForLibrary,
 } from "../api";
-import { KomgaStore } from "../store";
 
 /**
  * Implementation of the DirectoryHandler Methods
@@ -61,7 +60,6 @@ async function fetchDirectory(request: DirectoryRequest): IResponse {
   if (!host) {
     throw new Error("Host not defined");
   }
-  const asTitle = await KomgaStore.openSeriesAsTitle();
 
   if (seriesId) {
     const sort = convertSort(request.sort?.id) ?? Sort.Number;
@@ -85,7 +83,7 @@ async function fetchDirectory(request: DirectoryRequest): IResponse {
         request.page,
         request.query
       )
-    ).map((v) => seriesToTile(v, host, !(asTitle ?? false)));
+    ).map((v) => seriesToTile(v, host));
     return {
       results,
       isLastPage: results.length < RESULT_COUNT,
@@ -103,7 +101,7 @@ async function fetchDirectory(request: DirectoryRequest): IResponse {
         request.page,
         request.query
       )
-    ).map((v) => seriesToTile(v, host, !(asTitle ?? false)));
+    ).map((v) => seriesToTile(v, host));
     return {
       results,
       isLastPage: results.length < RESULT_COUNT,
