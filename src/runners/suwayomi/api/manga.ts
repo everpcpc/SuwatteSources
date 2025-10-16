@@ -191,6 +191,9 @@ export const getChapterPages = async (
         id
         sourceOrder
         pageCount
+        url
+        realUrl
+        isDownloaded
       }
     }
   `;
@@ -205,8 +208,16 @@ export const getChapterPages = async (
   const pages: string[] = [];
 
   for (let i = 0; i < pageCount; i++) {
-    const pageUrl = `${host}/api/v1/manga/${mangaId}/chapter/${sourceOrder}/page/${i}`;
-    pages.push(pageUrl);
+    if (data.chapter.isDownloaded) {
+      const pageUrl = `${host}/api/v1/manga/${mangaId}/chapter/${sourceOrder}/page/${i}`;
+      pages.push(pageUrl);
+    } else {
+      if (data.chapter.realUrl) {
+        pages.push(data.chapter.realUrl);
+      } else {
+        pages.push(data.chapter.url);
+      }
+    }
   }
 
   return pages;
