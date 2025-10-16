@@ -246,6 +246,7 @@ const getChapterPages = async (mangaId, chapterId) => {
         sourceOrder
         pageCount
         url
+        realUrl
         isDownloaded
       }
     }
@@ -263,7 +264,12 @@ const getChapterPages = async (mangaId, chapterId) => {
             pages.push(pageUrl);
         }
         else {
-            pages.push(data.chapter.url);
+            if (data.chapter.realUrl) {
+                pages.push(data.chapter.realUrl);
+            }
+            else {
+                pages.push(data.chapter.url);
+            }
         }
     }
     return pages;
