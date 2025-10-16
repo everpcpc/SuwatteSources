@@ -873,13 +873,13 @@ const info = {
 // Config
 const config = {
     disableChapterDataCaching: true,
-    disableLibraryActions: false,
-    disableContentLinking: true,
+    // disableLibraryActions: false,
+    // disableContentLinking: false,
+    // disableMigrationDestination: false,
+    // disableUpdateChecks: false,
     disableCustomThumbnails: true,
     disableLanguageFlags: true,
-    disableMigrationDestination: true,
     disableTrackerLinking: true,
-    disableUpdateChecks: true,
     allowsMultipleInstances: true,
     requiresAuthenticationToAccessContent: false, // Authentication is optional and configurable
 };
