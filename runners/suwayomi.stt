@@ -347,7 +347,7 @@ async function graphqlRequest(query, variables) {
         transformResponse: async (res) => {
             if (res.status === 401) {
                 // Signed Out
-                await ObjectStore.remove("authenticated");
+                await store_1.SuwayomiStore.removeAuthenticated();
             }
             return res;
         },
@@ -453,15 +453,15 @@ exports.SuwayomiAuthentication = {
             console.error(err.message);
             // Only clear credentials for authenticated modes
             if (authMode !== auth_2.AuthMode.NONE) {
-                await SecureStore.remove("credentials");
-                await ObjectStore.remove("authenticated");
+                await store_1.SuwayomiStore.removeCredentials();
+                await store_1.SuwayomiStore.removeAuthenticated();
             }
         }
         return null;
     },
     handleUserSignOut: async () => {
-        await SecureStore.remove("credentials");
-        await ObjectStore.remove("authenticated");
+        await store_1.SuwayomiStore.removeCredentials();
+        await store_1.SuwayomiStore.removeAuthenticated();
     },
     handleBasicAuth: async (identifier, password) => {
         const host = await store_1.SuwayomiStore.host();
@@ -476,8 +476,8 @@ exports.SuwayomiAuthentication = {
         });
         console.info("login successfully");
         // Set Props
-        await ObjectStore.set("authenticated", true);
-        await SecureStore.set("credentials", value);
+        await store_1.SuwayomiStore.setAuthenticated(true);
+        await store_1.SuwayomiStore.setCredentials(value);
     },
 };
 
@@ -717,7 +717,7 @@ exports.SuwayomiPreferenceProvider = {
                             title: "Sync Chapters Marked",
                             value: await store_1.SuwayomiStore.syncChaptersMarked(),
                             async didChange(value) {
-                                await ObjectStore.set("syncChaptersMarked", value);
+                                await store_1.SuwayomiStore.setSyncChaptersMarked(value);
                             },
                         }),
                     ],
@@ -824,13 +824,22 @@ exports.SuwayomiSetupProvider = {
     },
     validateSetupForm: async function ({ host: value, authMode, }) {
         let url = value.trim();
+        // Add protocol if missing
         if (!url.startsWith("http://") && !url.startsWith("https://")) {
             url = `http://${url}`;
         }
+        // Remove trailing slash
         if (url.endsWith("/")) {
             url = url.slice(0, -1);
         }
-        await ObjectStore.set("host", url);
+        // Validate URL format
+        try {
+            new URL(url);
+        }
+        catch (error) {
+            throw new Error("Invalid URL format. Please enter a valid server URL (e.g., http://localhost:4567 or http://192.168.1.100:4567)");
+        }
+        await store_1.SuwayomiStore.setHost(url);
         await store_1.SuwayomiStore.setAuthMode(authMode);
         // Only verify connection if no authentication is required
         // For Basic Auth mode, user needs to login first before we can verify
@@ -865,7 +874,7 @@ const impl_1 = require("./impl");
 const info = {
     id: "org.suwayomi",
     name: "Suwayomi",
-    version: 1.4,
+    version: 1.5,
     minSupportedAppVersion: "6.0.0",
     thumbnail: "suwayomi.png",
     website: "https://github.com/Suwayomi",
@@ -919,9 +928,21 @@ exports.SuwayomiStore = {
         const value = await SecureStore.string("credentials");
         return value;
     },
+    setCredentials: async (credentials) => {
+        await SecureStore.set("credentials", credentials);
+    },
+    removeCredentials: async () => {
+        await SecureStore.remove("credentials");
+    },
     authenticated: async () => {
         const value = await ObjectStore.boolean("authenticated");
         return value;
+    },
+    setAuthenticated: async (authenticated) => {
+        await ObjectStore.set("authenticated", authenticated);
+    },
+    removeAuthenticated: async () => {
+        await ObjectStore.remove("authenticated");
     },
     authMode: async () => {
         const value = await ObjectStore.string("authMode");
@@ -933,6 +954,9 @@ exports.SuwayomiStore = {
     syncChaptersMarked: async () => {
         const value = await ObjectStore.boolean("syncChaptersMarked");
         return value;
+    },
+    setSyncChaptersMarked: async (sync) => {
+        await ObjectStore.set("syncChaptersMarked", sync);
     },
 };
 
@@ -1046,14 +1070,13 @@ exports.mangaToContent = exports.chapterToChapter = exports.mangaToTile = export
 const daisuke_1 = require("@suwatte/daisuke");
 const types_1 = require("../types");
 const constants_1 = require("./constants");
+const store_1 = require("../store");
 // Declare getHost here to avoid circular dependency
 const getHost = async () => {
-    const host = await SecureStore.string("host");
+    const host = await store_1.SuwayomiStore.host();
     if (!host)
         throw new Error("You have not defined a server url!");
-    if (host.endsWith("/"))
-        return host.slice(0, -1);
-    return host;
+    return host.endsWith("/") ? host.slice(0, -1) : host;
 };
 exports.getHost = getHost;
 const convertSort = (val) => {
@@ -1169,7 +1192,7 @@ const convertStatus = (val) => {
     }
 };
 
-},{"../types":18,"./constants":19,"@suwatte/daisuke":22}],21:[function(require,module,exports){
+},{"../store":16,"../types":18,"./constants":19,"@suwatte/daisuke":22}],21:[function(require,module,exports){
 "use strict";
 var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
     if (k2 === undefined) k2 = k;
