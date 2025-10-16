@@ -255,7 +255,8 @@ const getChapterPages = async (mangaId, chapterId) => {
     const pageCount = data.chapter.pageCount;
     const sourceOrder = data.chapter.sourceOrder;
     if (!data.chapter.isDownloaded) {
-        throw new Error("Chapter is not downloaded");
+        console.warn(`Chapter ${chapterId} is not downloaded`);
+        return [];
     }
     const host = await (0, utils_1.getHost)();
     const pages = [];
