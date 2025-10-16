@@ -839,7 +839,7 @@ exports.SuwayomiSetupProvider = {
             }
             catch (error) {
                 console.error(`${error}`);
-                throw new Error("Cannot Connect to Suwayomi Server");
+                throw new Error("Cannot Connect to Suwayomi Server: " + error);
             }
         }
         else {
