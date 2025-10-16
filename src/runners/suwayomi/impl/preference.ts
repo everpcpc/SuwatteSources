@@ -13,7 +13,7 @@ export const SuwayomiPreferenceProvider: RunnerPreferenceProvider = {
               title: "Sync Chapters Marked",
               value: await SuwayomiStore.syncChaptersMarked(),
               async didChange(value) {
-                await ObjectStore.set("syncChaptersMarked", value);
+                await SuwayomiStore.setSyncChaptersMarked(value);
               },
             }),
           ],

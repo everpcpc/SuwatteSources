@@ -18,6 +18,7 @@ type SetupForm = {
 export const SuwayomiSetupProvider: RunnerSetupProvider = {
   getSetupMenu: async function (): Promise<Form> {
     const currentAuthMode = await SuwayomiStore.authMode();
+    const currentHost = await SuwayomiStore.host();
 
     return {
       sections: [
@@ -27,7 +28,7 @@ export const SuwayomiSetupProvider: RunnerSetupProvider = {
             UITextField({
               id: "host",
               title: "Server URL",
-              value: (await SuwayomiStore.host()) ?? "",
+              value: currentHost,
               placeholder: "http://localhost:4567",
             }),
           ],
@@ -56,14 +57,10 @@ export const SuwayomiSetupProvider: RunnerSetupProvider = {
     authMode,
   }: SetupForm): Promise<void> {
     let url = value.trim();
-    if (!url.startsWith("http://") && !url.startsWith("https://")) {
-      url = `http://${url}`;
-    }
     if (url.endsWith("/")) {
       url = url.slice(0, -1);
     }
-
-    await ObjectStore.set("host", url);
+    await SuwayomiStore.setHost(url);
     await SuwayomiStore.setAuthMode(authMode as AuthMode);
 
     // Only verify connection if no authentication is required
@@ -74,7 +71,7 @@ export const SuwayomiSetupProvider: RunnerSetupProvider = {
         await graphqlRequest(ABOUT_SERVER_QUERY);
       } catch (error) {
         console.error(`${error}`);
-        throw new Error("Cannot Connect to Suwayomi Server");
+        throw new Error("Cannot Connect to Suwayomi Server: " + error);
       }
     } else {
       console.info("Please login after setup");

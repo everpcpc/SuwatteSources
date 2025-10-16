@@ -37,16 +37,16 @@ export const SuwayomiAuthentication: BasicAuthenticatable = {
       console.error(err.message);
       // Only clear credentials for authenticated modes
       if (authMode !== AuthMode.NONE) {
-        await SecureStore.remove("credentials");
-        await ObjectStore.remove("authenticated");
+        await SuwayomiStore.removeCredentials();
+        await SuwayomiStore.removeAuthenticated();
       }
     }
 
     return null;
   },
   handleUserSignOut: async () => {
-    await SecureStore.remove("credentials");
-    await ObjectStore.remove("authenticated");
+    await SuwayomiStore.removeCredentials();
+    await SuwayomiStore.removeAuthenticated();
   },
   handleBasicAuth: async (identifier, password) => {
     const host = await SuwayomiStore.host();
@@ -65,7 +65,7 @@ export const SuwayomiAuthentication: BasicAuthenticatable = {
     console.info("login successfully");
 
     // Set Props
-    await ObjectStore.set("authenticated", true);
-    await SecureStore.set("credentials", value);
+    await SuwayomiStore.setAuthenticated(true);
+    await SuwayomiStore.setCredentials(value);
   },
 };

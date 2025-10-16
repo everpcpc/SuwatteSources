@@ -37,7 +37,7 @@ export async function graphqlRequest<T>(query: string, variables?: any) {
     transformResponse: async (res: NetworkResponse) => {
       if (res.status === 401) {
         // Signed Out
-        await ObjectStore.remove("authenticated");
+        await SuwayomiStore.removeAuthenticated();
       }
       return res;
     },

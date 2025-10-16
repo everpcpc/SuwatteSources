@@ -8,13 +8,13 @@ import {
 } from "@suwatte/daisuke";
 import { ChapterType, MangaType, MangaStatus } from "../types";
 import { Sort } from "./constants";
+import { SuwayomiStore } from "../store";
 
 // Declare getHost here to avoid circular dependency
 export const getHost = async (): Promise<string> => {
-  const host = await SecureStore.string("host");
+  const host = await SuwayomiStore.host();
   if (!host) throw new Error("You have not defined a server url!");
-  if (host.endsWith("/")) return host.slice(0, -1);
-  return host;
+  return host.endsWith("/") ? host.slice(0, -1) : host;
 };
 
 export const convertSort = (val: string | undefined): Sort | undefined => {
