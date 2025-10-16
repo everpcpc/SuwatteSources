@@ -23,7 +23,7 @@ type Suwayomi = ContentSource;
 const info: RunnerInfo = {
   id: "org.suwayomi",
   name: "Suwayomi",
-  version: 1.5,
+  version: 1.6,
   minSupportedAppVersion: "6.0.0",
   thumbnail: "suwayomi.png",
   website: "https://github.com/Suwayomi",
@@ -34,13 +34,13 @@ const info: RunnerInfo = {
 // Config
 const config: SourceConfig = {
   disableChapterDataCaching: true, // Refetch image list each time
-  disableLibraryActions: true, // Disable being able to add to user library
-  disableContentLinking: true,
+  // disableLibraryActions: false,
+  // disableContentLinking: false,
+  // disableMigrationDestination: false,
+  // disableUpdateChecks: false,
   disableCustomThumbnails: true,
   disableLanguageFlags: true,
-  disableMigrationDestination: true,
   disableTrackerLinking: true,
-  disableUpdateChecks: true,
   allowsMultipleInstances: true,
   requiresAuthenticationToAccessContent: false, // Authentication is optional and configurable
 };
