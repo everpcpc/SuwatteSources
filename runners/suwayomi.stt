@@ -800,7 +800,7 @@ exports.SuwayomiSetupProvider = {
                         (0, daisuke_1.UITextField)({
                             id: "host",
                             title: "Server URL",
-                            value: currentHost ?? "",
+                            value: currentHost,
                             placeholder: "http://localhost:4567",
                         }),
                     ],
@@ -914,7 +914,7 @@ const auth_1 = require("../types/auth");
 exports.SuwayomiStore = {
     host: async () => {
         const value = await ObjectStore.string("host");
-        return value;
+        return value ?? "";
     },
     setHost: async (host) => {
         await ObjectStore.set("host", host);
