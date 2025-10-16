@@ -791,6 +791,7 @@ const auth_2 = require("../types/auth");
 exports.SuwayomiSetupProvider = {
     getSetupMenu: async function () {
         const currentAuthMode = await store_1.SuwayomiStore.authMode();
+        const currentHost = await store_1.SuwayomiStore.host();
         return {
             sections: [
                 {
@@ -799,7 +800,7 @@ exports.SuwayomiSetupProvider = {
                         (0, daisuke_1.UITextField)({
                             id: "host",
                             title: "Server URL",
-                            value: (await store_1.SuwayomiStore.host()) ?? "",
+                            value: currentHost ?? "",
                             placeholder: "http://localhost:4567",
                         }),
                     ],
