@@ -837,7 +837,7 @@ exports.SuwayomiSetupProvider = {
             new URL(url);
         }
         catch (error) {
-            throw new Error("Invalid URL format. Please enter a valid server URL (e.g., http://localhost:4567 or http://192.168.1.100:4567)");
+            throw new Error("Invalid URL format: " + url, { cause: error });
         }
         await store_1.SuwayomiStore.setHost(url);
         await store_1.SuwayomiStore.setAuthMode(authMode);
