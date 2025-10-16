@@ -255,8 +255,9 @@ const getChapterPages = async (mangaId, chapterId) => {
     const pageCount = data.chapter.pageCount;
     const sourceOrder = data.chapter.sourceOrder;
     if (!data.chapter.isDownloaded) {
-        console.warn(`Chapter ${chapterId} is not downloaded`);
-        return [];
+        const message = "Chapter is not downloaded";
+        const page = `https://placehold.co/280x400/fff/333?text=${message}`;
+        return [page];
     }
     const host = await (0, utils_1.getHost)();
     const pages = [];
