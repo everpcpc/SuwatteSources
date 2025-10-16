@@ -50,7 +50,9 @@ export const verifyServerConnection = async (
   });
 
   if (response.status !== 200) {
-    throw new Error("Invalid credentials or server error");
+    console.error(`Verify failed with status ${response.status}`);
+    console.error(`Response data: ${response.data}`);
+    throw new Error("Verify server connection failed");
   }
 
   return response;

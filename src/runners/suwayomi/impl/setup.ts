@@ -73,6 +73,7 @@ export const SuwayomiSetupProvider: RunnerSetupProvider = {
         // Simple health check query
         await graphqlRequest(ABOUT_SERVER_QUERY);
       } catch (error) {
+        console.error(`${error}`);
         throw new Error("Cannot Connect to Suwayomi Server");
       }
     } else {
