@@ -836,7 +836,7 @@ const pageLinkResolver_1 = require("./impl/pageLinkResolver");
 const info = {
     id: "org.komga",
     name: "Komga",
-    version: 1.18,
+    version: 1.19,
     minSupportedAppVersion: "6.0.0",
     thumbnail: "komga.png",
     website: "https://komga.org",
@@ -846,7 +846,7 @@ const info = {
 // Config
 const config = {
     disableChapterDataCaching: true,
-    disableLibraryActions: true,
+    disableLibraryActions: false,
     disableContentLinking: true,
     disableCustomThumbnails: true,
     disableLanguageFlags: true,

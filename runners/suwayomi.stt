@@ -863,7 +863,7 @@ const impl_1 = require("./impl");
 const info = {
     id: "org.suwayomi",
     name: "Suwayomi",
-    version: 1.5,
+    version: 1.6,
     minSupportedAppVersion: "6.0.0",
     thumbnail: "suwayomi.png",
     website: "https://github.com/Suwayomi",
@@ -873,7 +873,7 @@ const info = {
 // Config
 const config = {
     disableChapterDataCaching: true,
-    disableLibraryActions: true,
+    disableLibraryActions: false,
     disableContentLinking: true,
     disableCustomThumbnails: true,
     disableLanguageFlags: true,
