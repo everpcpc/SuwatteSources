@@ -1133,7 +1133,6 @@ const mangaToContent = async (manga) => {
         ? `${host}/api/v1/manga/${manga.id}/thumbnail?fetchedAt=${Date.now()}`
         : "";
     const info = [];
-    const creators = [];
     if (manga.unreadCount === 0 && (manga.chapters?.totalCount ?? 0) > 0) {
         info.push("Finished");
     }
@@ -1143,18 +1142,40 @@ const mangaToContent = async (manga) => {
     else if (manga.unreadCount > 0) {
         info.push("Reading");
     }
+    const creators = [];
     if (manga.author) {
         creators.push(manga.author);
     }
-    if (manga.genre && manga.genre.length > 0) {
-        info.push(...manga.genre.filter((genre) => genre !== ""));
+    const properties = [];
+    const tags = [];
+    if (manga.source) {
+        tags.push({
+            id: manga.source.name,
+            title: manga.source.displayName,
+        });
     }
+    if (manga.genre && manga.genre.length > 0) {
+        for (const genre of manga.genre) {
+            if (genre !== "") {
+                tags.push({
+                    id: genre,
+                    title: genre,
+                });
+            }
+        }
+    }
+    properties.push({
+        id: "genres",
+        title: "Genres",
+        tags: tags,
+    });
     return {
         title: manga.title,
         creators,
         cover,
         status: convertStatus(manga.status),
         info,
+        properties,
         summary: manga.description,
         recommendedPanelMode: daisuke_1.ReadingMode.PAGED_MANGA,
     };
