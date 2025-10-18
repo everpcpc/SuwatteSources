@@ -3,8 +3,10 @@ import {
   Content,
   DefinedLanguages,
   Highlight,
+  Property,
   PublicationStatus,
   ReadingMode,
+  Tag,
 } from "@suwatte/daisuke";
 import { getHost } from "../api";
 import { BookDto, SeriesDto } from "../types";
@@ -110,23 +112,41 @@ export const seriesToContent = async (series: SeriesDto): Promise<Content> => {
     info.push("Reading");
   }
 
-  if (series.metadata.publisher) {
-    info.push(series.metadata.publisher);
-  }
-
   const readingDirection = convertReadingMode(series.metadata.readingDirection);
   if (readingDirection) {
     info.push(`${series.metadata.readingDirection}`);
   }
 
-  if (series.metadata.genres.length != 0) {
-    info.push(...series.metadata.genres);
+  const properties: Property[] = [];
+  const tags: Tag[] = [];
+  if (series.metadata.publisher) {
+    tags.push({
+      id: "publisher",
+      title: series.metadata.publisher,
+    });
   }
+  if (series.metadata.genres && series.metadata.genres.length > 0) {
+    for (const genre of series.metadata.genres) {
+      if (genre !== "") {
+        tags.push({
+          id: genre,
+          title: genre,
+        });
+      }
+    }
+  }
+  properties.push({
+    id: "genres",
+    title: "Genres",
+    tags: tags,
+  });
+
   return {
     title: series.metadata.title ?? series.name,
     cover,
     status: convertStatus(series.metadata.status),
     info,
+    properties,
     summary: series.metadata.summary,
     recommendedPanelMode: readingDirection,
   };
