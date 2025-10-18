@@ -3,8 +3,10 @@ import {
   Content,
   DefinedLanguages,
   Highlight,
+  Property,
   PublicationStatus,
   ReadingMode,
+  Tag,
 } from "@suwatte/daisuke";
 import { ChapterType, MangaType, MangaStatus } from "../types";
 import { Sort } from "./constants";
@@ -87,8 +89,6 @@ export const mangaToContent = async (manga: MangaType): Promise<Content> => {
     : "";
 
   const info: string[] = [];
-  const creators: string[] = [];
-
   if (manga.unreadCount === 0 && (manga.chapters?.totalCount ?? 0) > 0) {
     info.push("Finished");
   } else if (manga.unreadCount === manga.chapters?.totalCount) {
@@ -97,13 +97,35 @@ export const mangaToContent = async (manga: MangaType): Promise<Content> => {
     info.push("Reading");
   }
 
+  const creators: string[] = [];
   if (manga.author) {
     creators.push(manga.author);
   }
 
-  if (manga.genre && manga.genre.length > 0) {
-    info.push(...manga.genre.filter((genre) => genre !== ""));
+  const properties: Property[] = [];
+  const tags: Tag[] = [];
+  if (manga.source) {
+    tags.push({
+      id: manga.source.name,
+      title: manga.source.displayName,
+    });
   }
+
+  if (manga.genre && manga.genre.length > 0) {
+    for (const genre of manga.genre) {
+      if (genre !== "") {
+        tags.push({
+          id: genre,
+          title: genre,
+        });
+      }
+    }
+  }
+  properties.push({
+    id: "genres",
+    title: "Genres",
+    tags: tags,
+  });
 
   return {
     title: manga.title,
@@ -111,6 +133,7 @@ export const mangaToContent = async (manga: MangaType): Promise<Content> => {
     cover,
     status: convertStatus(manga.status),
     info,
+    properties,
     summary: manga.description,
     recommendedPanelMode: ReadingMode.PAGED_MANGA,
   };
