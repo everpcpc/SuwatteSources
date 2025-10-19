@@ -178,10 +178,10 @@ const convertReadingMode = (val: string): ReadingMode | undefined => {
   val = val.toUpperCase();
 
   switch (val) {
-    case "LEFT_TO_RIGHT": {
+    case "RIGHT_TO_LEFT": {
       return ReadingMode.PAGED_MANGA;
     }
-    case "RIGHT_TO_LEFT": {
+    case "LEFT_TO_RIGHT": {
       return ReadingMode.PAGED_COMIC;
     }
     case "VERTICAL": {
